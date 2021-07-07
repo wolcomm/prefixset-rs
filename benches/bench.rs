@@ -1,93 +1,97 @@
-use std::convert::TryInto;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::str::FromStr;
+use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use prefixset::{IpPrefix, Ipv4Prefix, Ipv6Prefix, PrefixSet};
+use prefixset::{IpPrefixAggregate, Ipv4Prefix, Ipv6Prefix, PrefixSet};
 
-fn read_prefixes<T>(filename: T) -> Vec<IpPrefix>
+trait BenchHelper
 where
-    T: AsRef<Path>,
+    Self: IpPrefixAggregate,
+    <Self as FromStr>::Err: std::fmt::Debug,
 {
-    let file = File::open(filename).unwrap();
-    BufReader::new(file)
-        .lines()
-        .into_iter()
-        .map(|line| line.unwrap().parse::<IpPrefix>().unwrap().try_into().unwrap())
-        .collect()
-}
+    const DATA_SETS: [(u32, &'static str); 1];
 
-mod ipv4 {
-    use super::*;
-
-    fn read_prefixes<T>(filename: T) -> Vec<Ipv4Prefix>
-    where
-        T: AsRef<Path>,
-    {
-        super::read_prefixes(filename)
+    fn read_prefixes(data_set: &str) -> Vec<Self> {
+        let path = format!("./benches/data/{}.txt", data_set);
+        let file = File::open(path).unwrap();
+        BufReader::new(file)
+            .lines()
             .into_iter()
-            .map(|p| p.try_into().unwrap())
+            .map(|line| line.unwrap().parse::<Self>().unwrap())
             .collect()
     }
 
-    pub fn construct(c: &mut Criterion) {
-        let mut g = c.benchmark_group("PrefixSet set construction");
-        g.measurement_time(std::time::Duration::from_secs(30))
-            .sample_size(50);
-        for bench in ["AS-WOLCOMM-IPv4-NONAGG"] {
-            let filename = format!("./benches/data/{}.txt", bench);
-            let prefixes = read_prefixes(filename);
-            g.bench_function(
-                bench,
-                |b| b.iter(
-                    || {
-                        let mut set = PrefixSet::new();
-                        for prefix in &prefixes {
-                            set = set.add(prefix.to_owned()).unwrap();
-                        }
-                    }
-                )
-            );
+    fn construct_set(prefixes: &Vec<Self>) -> PrefixSet<Self> {
+        let mut set = PrefixSet::new();
+        for prefix in prefixes {
+            set = set.add(prefix.to_owned()).unwrap();
         }
+        set
+    }
+
+    fn iterate_set(set: PrefixSet<Self>, expected: u32) {
+        let mut i = 0u32;
+        set.into_iter().for_each(|_| i += 1);
+        assert_eq!(i, expected)
     }
 }
 
-mod ipv6 {
-    use super::*;
+impl BenchHelper for Ipv4Prefix {
+    const DATA_SETS: [(u32, &'static str); 1] = [
+        (725492, "AS-WOLCOMM-IPv4-NONAGG")
+    ];
+}
+impl BenchHelper for Ipv6Prefix {
+    const DATA_SETS: [(u32, &'static str); 1] = [
+        (273873, "AS-WOLCOMM-IPv6-NONAGG")
+    ];
+}
 
-    fn read_prefixes<T>(filename: T) -> Vec<Ipv6Prefix>
-    where
-        T: AsRef<Path>,
-    {
-        super::read_prefixes(filename)
-            .into_iter()
-            .map(|p| p.try_into().unwrap())
-            .collect()
+trait BenchTest
+where
+    Self: BenchHelper,
+    <Self as FromStr>::Err: std::fmt::Debug,
+{
+    fn construct(c: &mut Criterion) {
+        let mut g = c.benchmark_group("PrefixSet construction");
+        g.measurement_time(Duration::from_secs(30));
+        g.sample_size(50);
+
+        for (_, data_set) in Self::DATA_SETS {
+            let prefixes = Self::read_prefixes(data_set);
+            g.bench_function(data_set, |b| {
+                b.iter( || Self::construct_set(&prefixes))
+            });
+        }
+        g.finish()
     }
 
-    pub fn construct(c: &mut Criterion) {
-        let mut g = c.benchmark_group("PrefixSet set construction");
-        g.measurement_time(std::time::Duration::from_secs(30))
-            .sample_size(50);
-        for bench in ["AS-WOLCOMM-IPv6-NONAGG"] {
-            let filename = format!("./benches/data/{}.txt", bench);
-            let prefixes = read_prefixes(filename);
-            g.bench_function(
-                bench,
-                |b| b.iter(
-                    || {
-                        let mut set = PrefixSet::new();
-                        for prefix in &prefixes {
-                            set = set.add(prefix.to_owned()).unwrap();
-                        }
-                    }
-                )
-            );
-        }
+    fn iterate(c: &mut Criterion) {
+        let mut g = c.benchmark_group("PrefixSet iteration");
+        g.measurement_time(Duration::from_secs(10));
+
+        for (items, data_set) in Self::DATA_SETS {
+            let prefixes = Self::read_prefixes(data_set);
+            let set = Self::construct_set(&prefixes);
+            g.bench_function(data_set, |b| {
+                b.iter(|| Self::iterate_set(set.clone(), items))
+            });
+        };
+        g.finish()
     }
 }
 
-criterion_group!(benches, ipv4::construct, ipv6::construct);
+impl BenchTest for Ipv4Prefix {}
+impl BenchTest for Ipv6Prefix {}
+
+criterion_group!(
+    benches,
+    Ipv4Prefix::construct,
+    Ipv4Prefix::iterate,
+    Ipv6Prefix::construct,
+    Ipv6Prefix::iterate,
+);
 criterion_main!(benches);
