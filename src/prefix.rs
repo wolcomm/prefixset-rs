@@ -1,28 +1,10 @@
-use std::convert::TryFrom;
 use std::ops::BitOrAssign;
 use std::str::FromStr;
 
-use ipnet::{PrefixLenError, AddrParseError, IpNet, Ipv4Net, Ipv6Net};
+use ipnet::{PrefixLenError, Ipv4Net, Ipv6Net};
 use num::PrimInt;
 
-pub enum IpPrefix {
-    IPv4(Ipv4Prefix),
-    IPv6(Ipv6Prefix),
-}
-
-impl FromStr for IpPrefix {
-    type Err = AddrParseError;
-
-    fn from_str(s: &str) -> Result<Self, AddrParseError> {
-        let net = IpNet::from_str(s)?;
-        match net {
-            IpNet::V4(net) => Ok(Self::IPv4(net)),
-            IpNet::V6(net) => Ok(Self::IPv6(net)),
-        }
-    }
-}
-
-pub trait IpPrefixAggregate: TryFrom<IpPrefix> + std::fmt::Debug + Copy + FromStr {
+pub trait IpPrefixAggregate: std::fmt::Debug + Copy + FromStr {
     type AggrMap:
         PrimInt +
         BitOrAssign<Self::AggrMap> +
@@ -38,16 +20,6 @@ pub trait IpPrefixAggregate: TryFrom<IpPrefix> + std::fmt::Debug + Copy + FromSt
 }
 
 pub type Ipv4Prefix = Ipv4Net;
-
-impl TryFrom<IpPrefix> for Ipv4Prefix {
-    type Error = &'static str;
-    fn try_from(p: IpPrefix) -> Result<Self, Self::Error> {
-        match p {
-            IpPrefix::IPv4(p) => Ok(p.trunc()),
-            _ => Err("address family mismatch: expected IPv4 prefix")
-        }
-    }
-}
 
 impl IpPrefixAggregate for Ipv4Prefix {
     type AggrMap = u32;
@@ -68,16 +40,6 @@ impl IpPrefixAggregate for Ipv4Prefix {
 
 pub type Ipv6Prefix = Ipv6Net;
 
-impl TryFrom<IpPrefix> for Ipv6Prefix {
-    type Error = &'static str;
-    fn try_from(p: IpPrefix) -> Result<Self, Self::Error> {
-        match p {
-            IpPrefix::IPv6(p) => Ok(p.trunc()),
-            _ => Err("address family mismatch: expected IPv6 prefix")
-        }
-    }
-}
-
 impl IpPrefixAggregate for Ipv6Prefix {
     type AggrMap = u128;
     const MAX_LENGTH: u8 = 128;
@@ -97,20 +59,15 @@ impl IpPrefixAggregate for Ipv6Prefix {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
-    use std::str::FromStr;
 
     use crate::tests::TestResult;
-    use super::{IpPrefix, IpPrefixAggregate, Ipv4Prefix, Ipv6Prefix};
+    use super::{IpPrefixAggregate, Ipv4Prefix, Ipv6Prefix};
 
     mod ipv4_prefix_from_str {
         use super::*;
 
         fn setup() -> Ipv4Prefix {
-            IpPrefix::from_str("10.0.0.0/8")
-                .unwrap()
-                .try_into()
-                .unwrap()
+            "10.0.0.0/8".parse().unwrap()
         }
 
         #[test]
@@ -156,10 +113,7 @@ mod tests {
         use super::*;
 
         fn setup() -> Ipv6Prefix {
-            IpPrefix::from_str("2001:db8::/32")
-                .unwrap()
-                .try_into()
-                .unwrap()
+            "2001:db8::/32".parse().unwrap()
         }
 
         #[test]

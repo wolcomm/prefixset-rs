@@ -61,10 +61,7 @@ impl<P: IpPrefixAggregate> IntoIterator for PrefixSet<P> {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
-    use std::str::FromStr;
-
-    use crate::{IpPrefix, Ipv4Prefix};
+    use crate::Ipv4Prefix;
     use crate::tests::{assert_none, TestResult};
 
     use super::PrefixSet;
@@ -97,10 +94,7 @@ mod tests {
 
             fn setup() -> PrefixSet<Ipv4Prefix> {
                 let mut s = super::setup();
-                let p = IpPrefix::from_str("192.0.2.0/24")
-                    .unwrap()
-                    .try_into()
-                    .unwrap();
+                let p = "192.0.2.0/24".parse().unwrap();
                 s.add(p).unwrap();
                 s
             }
@@ -126,10 +120,7 @@ mod tests {
 
                 fn setup() -> PrefixSet<Ipv4Prefix> {
                     let mut s = super::setup();
-                    let p = IpPrefix::from_str("192.0.0.0/22")
-                        .unwrap()
-                        .try_into()
-                        .unwrap();
+                    let p = "192.0.0.0/22".parse().unwrap();
                     s.add(p).unwrap();
                     s
                 }
