@@ -1,0 +1,21 @@
+[package]
+name = "prefixset"
+version = "0.1.0"
+authors = ["Ben Maddison <benm@workonline.africa>"]
+edition = "2018"
+
+[lib]
+bench = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ipnet = "^2.3"
+num = "^0.4"
+
+[dev-dependencies]
+criterion = {version = "^0.3", features = ["html_reports"]}
+
+[[bench]]
+name = "bench"
+harness = false
