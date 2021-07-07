@@ -4,7 +4,7 @@ use std::error::Error;
 
 use num::{PrimInt, One, Zero};
 
-use crate::prefix::IpPrefixAggregate;
+use crate::prefix::IpPrefix;
 
 enum Comparison {
     Equal,
@@ -19,15 +19,15 @@ enum Direction {
 }
 
 #[derive(Clone, Debug)]
-pub struct Node<P: IpPrefixAggregate> {
+pub struct Node<P: IpPrefix> {
     prefix: P,
     left: Option<Box<Node<P>>>,
     right: Option<Box<Node<P>>>,
-    gluemap: P::AggrMap,
+    gluemap: P::BitMap,
 }
 
-impl<P: IpPrefixAggregate> Node<P> {
-    fn new(prefix: P, gluemap: P::AggrMap) -> Self {
+impl<P: IpPrefix> Node<P> {
+    fn new(prefix: P, gluemap: P::BitMap) -> Self {
         Node{
             prefix,
             gluemap,
@@ -37,12 +37,12 @@ impl<P: IpPrefixAggregate> Node<P> {
     }
 
     pub fn new_singleton(prefix: P) -> Self {
-        let gluemap = P::AggrMap::one() << prefix.length().into();
+        let gluemap = P::BitMap::one() << prefix.length().into();
         Self::new(prefix, gluemap)
     }
 
     fn new_glue(prefix: P) -> Self {
-        Self::new(prefix, P::AggrMap::zero())
+        Self::new(prefix, P::BitMap::zero())
     }
 
     pub fn prefix(&self) -> &P {
@@ -145,13 +145,13 @@ impl<P: IpPrefixAggregate> Node<P> {
     }
 
     pub fn is_glue(&self) -> bool {
-        self.gluemap == P::AggrMap::zero()
+        self.gluemap == P::BitMap::zero()
     }
 
     fn branch_direction(&self, bit_index: u8) -> Direction {
         let next_index = bit_index + 1;
-        let mask = P::AggrMap::one() << (P::MAX_LENGTH - next_index).into();
-        if self.prefix.bits() & mask == P::AggrMap::zero() {
+        let mask = P::BitMap::one() << (P::MAX_LENGTH - next_index).into();
+        if self.prefix.bits() & mask == P::BitMap::zero() {
             Direction::Left
         } else {
             Direction::Right
@@ -176,7 +176,7 @@ impl<P: IpPrefixAggregate> Node<P> {
     }
 }
 
-impl<P: IpPrefixAggregate> PartialEq for Node<P> {
+impl<P: IpPrefix> PartialEq for Node<P> {
     fn eq(&self, other: &Self) -> bool {
         (self.prefix.bits() == other.prefix.bits()) 
             && (self.prefix.length() == other.prefix.length())
@@ -187,12 +187,12 @@ impl<P: IpPrefixAggregate> PartialEq for Node<P> {
 #[cfg(test)]
 mod tests {
     use crate::{Ipv4Prefix, Ipv6Prefix};
-    use crate::prefix::IpPrefixAggregate;
+    use crate::prefix::IpPrefix;
     use crate::tests::{assert_none, assert_some, TestResult};
 
     use super::Node;
 
-    fn subtree_size<P: IpPrefixAggregate>(root: Box<Node<P>>) -> usize {
+    fn subtree_size<P: IpPrefix>(root: Box<Node<P>>) -> usize {
         let mut i: usize = 0;
         root.walk(&mut |_| i += 1);
         i

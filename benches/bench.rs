@@ -5,11 +5,11 @@ use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use prefixset::{IpPrefixAggregate, Ipv4Prefix, Ipv6Prefix, PrefixSet};
+use prefixset::{IpPrefix, Ipv4Prefix, Ipv6Prefix, PrefixSet};
 
 trait BenchHelper
 where
-    Self: IpPrefixAggregate,
+    Self: IpPrefix,
     <Self as FromStr>::Err: std::fmt::Debug,
 {
     const DATA_SETS: [(u32, &'static str); 1];

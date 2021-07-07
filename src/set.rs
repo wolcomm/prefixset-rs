@@ -1,14 +1,14 @@
 use std::error::Error;
 
 use crate::node::Node;
-use crate::prefix::IpPrefixAggregate;
+use crate::prefix::IpPrefix;
 
 #[derive(Clone, Debug)]
-pub struct PrefixSet<P: IpPrefixAggregate> {
+pub struct PrefixSet<P: IpPrefix> {
     root: Option<Box<Node<P>>>,
 }
 
-impl<P: IpPrefixAggregate> PrefixSet<P> {
+impl<P: IpPrefix> PrefixSet<P> {
     pub fn new() -> Self {
         PrefixSet{
             root: None
@@ -43,7 +43,7 @@ impl<P: IpPrefixAggregate> PrefixSet<P> {
     }
 }
 
-impl<P: IpPrefixAggregate> IntoIterator for PrefixSet<P> {
+impl<P: IpPrefix> IntoIterator for PrefixSet<P> {
     type Item = P;
     type IntoIter = std::vec::IntoIter<P>;
 

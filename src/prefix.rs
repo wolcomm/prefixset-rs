@@ -4,16 +4,16 @@ use std::str::FromStr;
 use ipnet::{AddrParseError, PrefixLenError, Ipv4Net, Ipv6Net};
 use num::PrimInt;
 
-pub trait IpPrefixAggregate
+pub trait IpPrefix
 where
     Self: std::fmt::Debug + Copy + FromStr,
-    Self::AggrMap: PrimInt + BitOrAssign<Self::AggrMap> + std::fmt::Debug,
+    Self::BitMap: PrimInt + BitOrAssign<Self::BitMap> + std::fmt::Debug,
 {
-    type AggrMap;
+    type BitMap;
 
     const MAX_LENGTH: u8;
 
-    fn bits(&self) -> Self::AggrMap;
+    fn bits(&self) -> Self::BitMap;
 
     fn length(&self) -> u8;
 
@@ -45,11 +45,11 @@ impl FromStr for Ipv4Prefix {
     }
 }
 
-impl IpPrefixAggregate for Ipv4Prefix {
-    type AggrMap = u32;
+impl IpPrefix for Ipv4Prefix {
+    type BitMap = u32;
     const MAX_LENGTH: u8 = 32;
 
-    fn bits(&self) -> Self::AggrMap {
+    fn bits(&self) -> Self::BitMap {
         self.bits
     }
 
@@ -87,11 +87,11 @@ impl FromStr for Ipv6Prefix {
     }
 }
 
-impl IpPrefixAggregate for Ipv6Prefix {
-    type AggrMap = u128;
+impl IpPrefix for Ipv6Prefix {
+    type BitMap = u128;
     const MAX_LENGTH: u8 = 128;
 
-    fn bits(&self) -> Self::AggrMap {
+    fn bits(&self) -> Self::BitMap {
         self.bits
     }
 
@@ -108,7 +108,7 @@ impl IpPrefixAggregate for Ipv6Prefix {
 mod tests {
 
     use crate::tests::TestResult;
-    use super::{IpPrefixAggregate, Ipv4Prefix, Ipv6Prefix};
+    use super::{IpPrefix, Ipv4Prefix, Ipv6Prefix};
 
     mod ipv4_prefix_from_str {
         use super::*;
