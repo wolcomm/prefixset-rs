@@ -49,7 +49,7 @@ impl<P: IpPrefixAggregate> Node<P> {
         &self.prefix
     }
 
-    pub fn add(mut self, mut other: Self) -> Result<Self, Box<dyn Error>> {
+    pub fn add(mut self: Box<Self>, mut other: Box<Self>) -> Result<Box<Self>, Box<dyn Error>> {
         match self.compare_with(&other)? {
             Comparison::Equal => {
                 self.add_glue_from(&other);
@@ -60,17 +60,17 @@ impl<P: IpPrefixAggregate> Node<P> {
                     Direction::Left => {
                         if let Some(child) = self.left {
                             let new_child = child.add(other)?;
-                            self.left = Some(Box::new(new_child));
+                            self.left = Some(new_child);
                         } else {
-                            self.left = Some(Box::new(other));
+                            self.left = Some(other);
                         }
                     },
                     Direction::Right => {
                         if let Some(child) = self.right {
                             let new_child = child.add(other)?;
-                            self.right = Some(Box::new(new_child));
+                            self.right = Some(new_child);
                         } else {
-                            self.right = Some(Box::new(other));
+                            self.right = Some(other);
                         }
                     },
                 };
@@ -79,25 +79,25 @@ impl<P: IpPrefixAggregate> Node<P> {
             Comparison::ParentOf(common) => {
                 match self.branch_direction(common) {
                     Direction::Left => {
-                        other.left = Some(Box::new(self));
+                        other.left = Some(self);
                     },
                     Direction::Right => {
-                        other.right = Some(Box::new(self));
+                        other.right = Some(self);
                     }
                 };
                 Ok(other)
             }
             Comparison::Divergent(common) => {
                 let glue_prefix = self.prefix.new_from(common)?;
-                let mut glue = Self::new_glue(glue_prefix);
+                let mut glue = Box::new(Self::new_glue(glue_prefix));
                 match self.branch_direction(common) {
                     Direction::Left => {
-                        glue.left = Some(Box::new(self));
-                        glue.right = Some(Box::new(other));
+                        glue.left = Some(self);
+                        glue.right = Some(other);
                     },
                     Direction::Right => {
-                        glue.left = Some(Box::new(other));
-                        glue.right = Some(Box::new(self));
+                        glue.left = Some(other);
+                        glue.right = Some(self);
                     }
                 };
                 Ok(glue)
@@ -186,16 +186,13 @@ impl<P: IpPrefixAggregate> PartialEq for Node<P> {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
-    use std::str::FromStr;
-
-    use crate::{IpPrefix, Ipv4Prefix, Ipv6Prefix};
+    use crate::{Ipv4Prefix, Ipv6Prefix};
     use crate::prefix::IpPrefixAggregate;
     use crate::tests::{assert_none, assert_some, TestResult};
 
     use super::Node;
 
-    fn subtree_size<P: IpPrefixAggregate>(root: Node<P>) -> usize {
+    fn subtree_size<P: IpPrefixAggregate>(root: Box<Node<P>>) -> usize {
         let mut i: usize = 0;
         root.walk(&mut |_| i += 1);
         i
@@ -205,12 +202,9 @@ mod tests {
     mod new_ipv4_singleton {
         use super::*;
 
-        fn setup() -> Node<Ipv4Prefix> {
-            let p = IpPrefix::from_str("192.0.2.0/24")
-                .unwrap()
-                .try_into()
-                .unwrap();
-            Node::new_singleton(p)
+        fn setup() -> Box<Node<Ipv4Prefix>> {
+            let p = "192.0.2.0/24".parse().unwrap();
+            Box::new(Node::new_singleton(p))
         }
 
         #[test]
@@ -231,7 +225,7 @@ mod tests {
         mod added_with_self {
             use super::*;
 
-            fn setup() -> Node<Ipv4Prefix> {
+            fn setup() -> Box<Node<Ipv4Prefix>> {
                 let n = super::setup();
                 let m = super::setup();
                 n.add(m).unwrap()
@@ -256,13 +250,10 @@ mod tests {
         mod added_with_subprefix {
             use super::*;
 
-            fn setup() -> Node<Ipv4Prefix> {
+            fn setup() -> Box<Node<Ipv4Prefix>> {
                 let n = super::setup();
-                let q = IpPrefix::from_str("192.0.2.192/26")
-                    .unwrap()
-                    .try_into()
-                    .unwrap();
-                let m = Node::new_singleton(q);
+                let q = "192.0.2.192/26".parse().unwrap();
+                let m = Box::new(Node::new_singleton(q));
                 n.add(m).unwrap()
             }
 
@@ -297,13 +288,10 @@ mod tests {
         mod added_with_superprefix {
             use super::*;
 
-            fn setup() -> Node<Ipv4Prefix> {
+            fn setup() -> Box<Node<Ipv4Prefix>> {
                 let n = super::setup();
-                let q = IpPrefix::from_str("192.0.0.0/16")
-                    .unwrap()
-                    .try_into()
-                    .unwrap();
-                let m = Node::new_singleton(q);
+                let q = "192.0.0.0/16".parse().unwrap();
+                let m = Box::new(Node::new_singleton(q));
                 n.add(m).unwrap()
             }
 
@@ -338,13 +326,10 @@ mod tests {
         mod added_with_sibling {
             use super::*;
 
-            fn setup() -> Node<Ipv4Prefix> {
+            fn setup() -> Box<Node<Ipv4Prefix>> {
                 let n = super::setup();
-                let q = IpPrefix::from_str("192.168.0.0/16")
-                    .unwrap()
-                    .try_into()
-                    .unwrap();
-                let m = Node::new_singleton(q);
+                let q = "192.168.0.0/16".parse().unwrap();
+                let m = Box::new(Node::new_singleton(q));
                 n.add(m).unwrap()
             }
 
@@ -387,12 +372,9 @@ mod tests {
     mod new_ipv6_singleton {
         use super::*;
 
-        fn setup() -> Node<Ipv6Prefix> {
-            let p = IpPrefix::from_str("2001:db8:f00::/48")
-                .unwrap()
-                .try_into()
-                .unwrap();
-            Node::new_singleton(p)
+        fn setup() -> Box<Node<Ipv6Prefix>> {
+            let p = "2001:db8:f00::/48".parse().unwrap();
+            Box::new(Node::new_singleton(p))
         }
 
         #[test]
@@ -413,7 +395,7 @@ mod tests {
         mod added_with_self {
             use super::*;
 
-            fn setup() -> Node<Ipv6Prefix> {
+            fn setup() -> Box<Node<Ipv6Prefix>> {
                 let n = super::setup();
                 let m = super::setup();
                 n.add(m).unwrap()
@@ -438,13 +420,10 @@ mod tests {
         mod added_with_subprefix {
             use super::*;
 
-            fn setup() -> Node<Ipv6Prefix> {
+            fn setup() -> Box<Node<Ipv6Prefix>> {
                 let n = super::setup();
-                let q = IpPrefix::from_str("2001:db8:f00:baa::/64")
-                    .unwrap()
-                    .try_into()
-                    .unwrap();
-                let m = Node::new_singleton(q);
+                let q = "2001:db8:f00:baa::/64".parse().unwrap();
+                let m = Box::new(Node::new_singleton(q));
                 n.add(m).unwrap()
             }
 
@@ -479,13 +458,10 @@ mod tests {
         mod added_with_superprefix {
             use super::*;
 
-            fn setup() -> Node<Ipv6Prefix> {
+            fn setup() -> Box<Node<Ipv6Prefix>> {
                 let n = super::setup();
-                let q = IpPrefix::from_str("2001:db8::/36")
-                    .unwrap()
-                    .try_into()
-                    .unwrap();
-                let m = Node::new_singleton(q);
+                let q = "2001:db8::/36".parse().unwrap();
+                let m = Box::new(Node::new_singleton(q));
                 n.add(m).unwrap()
             }
 
@@ -520,13 +496,10 @@ mod tests {
         mod added_with_sibling {
             use super::*;
 
-            fn setup() -> Node<Ipv6Prefix> {
+            fn setup() -> Box<Node<Ipv6Prefix>> {
                 let n = super::setup();
-                let q = IpPrefix::from_str("2001:db8:baa::/48")
-                    .unwrap()
-                    .try_into()
-                    .unwrap();
-                let m = Node::new_singleton(q);
+                let q = "2001:db8:baa::/48".parse().unwrap();
+                let m = Box::new(Node::new_singleton(q));
                 n.add(m).unwrap()
             }
 

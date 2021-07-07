@@ -15,15 +15,15 @@ impl<P: IpPrefixAggregate> PrefixSet<P> {
         }
     }
 
-    pub fn add(mut self, prefix: P) -> Result<Self, Box<dyn Error>> {
-        let new = Node::new_singleton(prefix);
-        match self.root {
+    pub fn add(&mut self, prefix: P) -> Result<&mut Self, Box<dyn Error>> {
+        let new = Box::new(Node::new_singleton(prefix));
+        match std::mem::take(&mut self.root) {
             Some(root) => {
                 let new_root = root.add(new)?;
-                self.root = Some(Box::new(new_root));
+                self.root = Some(new_root);
             }
             None => {
-                self.root = Some(Box::new(new));
+                self.root = Some(new);
             }
         };
         Ok(self)
@@ -96,12 +96,13 @@ mod tests {
             use super::*;
 
             fn setup() -> PrefixSet<Ipv4Prefix> {
-                let s = super::setup();
+                let mut s = super::setup();
                 let p = IpPrefix::from_str("192.0.2.0/24")
                     .unwrap()
                     .try_into()
                     .unwrap();
-                s.add(p).unwrap()
+                s.add(p).unwrap();
+                s
             }
 
             #[test]
@@ -124,12 +125,13 @@ mod tests {
                 use super::*;
 
                 fn setup() -> PrefixSet<Ipv4Prefix> {
-                    let s = super::setup();
+                    let mut s = super::setup();
                     let p = IpPrefix::from_str("192.0.0.0/22")
                         .unwrap()
                         .try_into()
                         .unwrap();
-                    s.add(p).unwrap()
+                    s.add(p).unwrap();
+                    s
                 }
 
                 #[test]

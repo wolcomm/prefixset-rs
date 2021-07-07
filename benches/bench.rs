@@ -27,7 +27,7 @@ where
     fn construct_set(prefixes: &Vec<Self>) -> PrefixSet<Self> {
         let mut set = PrefixSet::new();
         for prefix in prefixes {
-            set = set.add(prefix.to_owned()).unwrap();
+            set.add(prefix.to_owned()).unwrap();
         }
         set
     }
