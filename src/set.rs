@@ -46,6 +46,7 @@ impl<P: IpPrefixAggregate> PrefixSet<P> {
 impl<P: IpPrefixAggregate> IntoIterator for PrefixSet<P> {
     type Item = P;
     type IntoIter = std::vec::IntoIter<P>;
+
     fn into_iter(self) -> Self::IntoIter {
         let mut items: Vec<P> = Vec::new();
         if let Some(root) = &self.root {

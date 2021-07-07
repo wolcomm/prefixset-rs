@@ -4,11 +4,12 @@ use std::str::FromStr;
 use ipnet::{PrefixLenError, Ipv4Net, Ipv6Net};
 use num::PrimInt;
 
-pub trait IpPrefixAggregate: std::fmt::Debug + Copy + FromStr {
-    type AggrMap:
-        PrimInt +
-        BitOrAssign<Self::AggrMap> +
-        std::fmt::Debug;
+pub trait IpPrefixAggregate
+where
+    Self: std::fmt::Debug + Copy + FromStr,
+    Self::AggrMap: PrimInt + BitOrAssign<Self::AggrMap> + std::fmt::Debug,
+{
+    type AggrMap;
 
     const MAX_LENGTH: u8;
 
