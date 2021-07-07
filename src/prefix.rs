@@ -22,7 +22,7 @@ impl FromStr for IpPrefix {
     }
 }
 
-pub trait IpPrefixAggregate: TryFrom<IpPrefix> + std::fmt::Debug + Copy {
+pub trait IpPrefixAggregate: TryFrom<IpPrefix> + std::fmt::Debug + Copy + FromStr {
     type AggrMap:
         PrimInt +
         BitOrAssign<Self::AggrMap> +

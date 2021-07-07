@@ -18,7 +18,7 @@ enum Direction {
     Right,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Node<P: IpPrefixAggregate> {
     prefix: P,
     left: Option<Box<Node<P>>>,

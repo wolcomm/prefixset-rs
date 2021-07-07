@@ -3,7 +3,7 @@ use std::error::Error;
 use crate::node::Node;
 use crate::prefix::IpPrefixAggregate;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PrefixSet<P: IpPrefixAggregate> {
     root: Option<Box<Node<P>>>,
 }
@@ -49,7 +49,11 @@ impl<P: IpPrefixAggregate> IntoIterator for PrefixSet<P> {
     fn into_iter(self) -> Self::IntoIter {
         let mut items: Vec<P> = Vec::new();
         if let Some(root) = &self.root {
-            root.walk(&mut |node: &Node<P>| items.push(node.prefix().to_owned()));
+            root.walk(&mut |node: &Node<P>| {
+                if ! node.is_glue() {
+                    items.push(node.prefix().to_owned())
+                }
+            });
         }
         items.into_iter()
     }
