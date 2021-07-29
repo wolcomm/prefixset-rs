@@ -1,9 +1,9 @@
 use num::Zero;
 
-use crate::{IpPrefix, IpPrefixRange, Ipv4Prefix, Ipv6Prefix};
 use crate::tests::{assert_none, assert_some, TestResult};
+use crate::{IpPrefix, IpPrefixRange, Ipv4Prefix, Ipv6Prefix};
 
-use super::{Node, GlueMap};
+use super::{GlueMap, Node};
 
 fn subtree_size<P: IpPrefix>(root: Box<Node<P>>) -> usize {
     let mut i: usize = 0;
@@ -110,7 +110,9 @@ mod new_ipv4_singleton {
     #[test]
     fn becomes_glue_after_removal() -> TestResult {
         let n = setup();
-        assert!(is_glue(&n.remove(&mut Node::new_singleton("192.0.2.0/24".parse().unwrap()))));
+        assert!(is_glue(&n.remove(&mut Node::new_singleton(
+            "192.0.2.0/24".parse().unwrap()
+        ))));
         Ok(())
     }
 
@@ -179,7 +181,9 @@ mod new_ipv4_singleton {
         #[test]
         fn becomes_glue_after_removal() -> TestResult {
             let n = setup();
-            assert!(is_glue(&n.remove(&mut Node::new_singleton("192.0.2.0/24".parse().unwrap()))));
+            assert!(is_glue(&n.remove(&mut Node::new_singleton(
+                "192.0.2.0/24".parse().unwrap()
+            ))));
             Ok(())
         }
     }
@@ -262,7 +266,8 @@ mod new_ipv4_singleton {
         #[test]
         fn is_unchanged_after_subprefix_removal() -> TestResult {
             let n = setup();
-            let m = n.clone()
+            let m = n
+                .clone()
                 .remove(&mut Node::new_singleton("192.0.2.0/24".parse().unwrap()));
             println!("{:#?}", m);
             assert_eq!(m, n);
@@ -339,7 +344,7 @@ mod new_ipv4_singleton {
             fn is_glue_after_subprefix_removal() -> TestResult {
                 let mut n = setup();
                 let mut r = Node::new_range(
-                    IpPrefixRange::new("192.0.2.0/23".parse().unwrap(), 24, 24).unwrap()
+                    IpPrefixRange::new("192.0.2.0/23".parse().unwrap(), 24, 24).unwrap(),
                 );
                 n = n.remove(&mut r);
                 println!("{:#?}", n);

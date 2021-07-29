@@ -1,13 +1,5 @@
 use std::cmp::PartialEq;
-use std::ops::{
-    BitAnd,
-    BitOr,
-    BitXor,
-    Not,
-    Add,
-    Sub,
-    Mul,
-};
+use std::ops::{Add, BitAnd, BitOr, BitXor, Mul, Not, Sub};
 
 use num::{One, Zero};
 
@@ -27,13 +19,10 @@ impl<P: IpPrefix> Zero for PrefixSet<P> {
 
 impl<P: IpPrefix> One for PrefixSet<P> {
     fn one() -> Self {
-        Self::new().add_range(
-            IpPrefixRange::new(
-                    P::new(P::BitMap::zero(), 0).unwrap(),
-                    0,
-                    P::MAX_LENGTH,
-                )
-                .unwrap()
+        Self::new()
+            .add_range(
+                IpPrefixRange::new(P::new(P::BitMap::zero(), 0).unwrap(), 0, P::MAX_LENGTH)
+                    .unwrap(),
             )
             .to_owned()
     }
@@ -44,10 +33,8 @@ impl<P: IpPrefix> BitAnd for PrefixSet<P> {
 
     fn bitand(self, rhs: Self) -> Self::Output {
         match (self.root, rhs.root) {
-            (Some(r), Some(s)) => Self::Output::new_with_root(r & s)
-                .aggregate()
-                .to_owned(),
-            _ => PrefixSet::zero()
+            (Some(r), Some(s)) => Self::Output::new_with_root(r & s).aggregate().to_owned(),
+            _ => PrefixSet::zero(),
         }
     }
 }
@@ -62,7 +49,7 @@ impl<P: IpPrefix> BitOr for PrefixSet<P> {
                 .to_owned(),
             (Some(_), None) => self,
             (None, Some(_)) => rhs,
-            (None, None) => Self::Output::zero()
+            (None, None) => Self::Output::zero(),
         }
     }
 }
@@ -99,7 +86,7 @@ impl<P: IpPrefix> Sub for PrefixSet<P> {
             (Some(r), Some(s)) => Self::Output::new_with_root(r.to_owned() - s.to_owned())
                 .aggregate()
                 .to_owned(),
-            _ => self
+            _ => self,
         }
     }
 }
@@ -115,11 +102,7 @@ impl<P: IpPrefix> Mul for PrefixSet<P> {
 impl<P: IpPrefix> PartialEq for PrefixSet<P> {
     fn eq(&self, other: &Self) -> bool {
         match (&self.root, &other.root) {
-            (Some(r), Some(s)) => {
-                r.iter_subtree()
-                    .zip(s.iter_subtree())
-                    .all(|(m, n)| m == n)
-            },
+            (Some(r), Some(s)) => r.iter_subtree().zip(s.iter_subtree()).all(|(m, n)| m == n),
             (None, None) => true,
             _ => false,
         }
@@ -130,8 +113,8 @@ impl<P: IpPrefix> PartialEq for PrefixSet<P> {
 mod tests {
     use paste::paste;
 
-    use crate::tests::TestResult;
     use crate::prefix::{Ipv4Prefix, Ipv6Prefix};
+    use crate::tests::TestResult;
 
     use super::*;
 
@@ -223,51 +206,48 @@ mod tests {
         Ok(())
     }
 
-    test_unary_op!(
-        !zero == one,
-        !one  == zero
-    );
+    test_unary_op!(!zero == one, !one == zero);
 
     test_binary_op!(
         zero & zero == zero,
-        zero & one  == zero,
-        one  & zero == zero,
-        one  & one  == one
+        zero & one == zero,
+        one & zero == zero,
+        one & one == one
     );
 
     test_binary_op!(
         zero | zero == zero,
-        zero | one  == one,
-        one  | zero == one,
-        one  | one  == one
+        zero | one == one,
+        one | zero == one,
+        one | one == one
     );
 
     test_binary_op!(
         zero ^ zero == zero,
-        zero ^ one  == one,
-        one  ^ zero == one,
-        one  ^ one  == zero
+        zero ^ one == one,
+        one ^ zero == one,
+        one ^ one == zero
     );
 
     test_binary_op!(
         zero + zero == zero,
-        zero + one  == one,
-        one  + zero == one,
-        one  + one  == one
+        zero + one == one,
+        one + zero == one,
+        one + one == one
     );
 
     test_binary_op!(
         zero - zero == zero,
-        zero - one  == zero,
-        one  - zero == one,
-        one  - one  == zero
+        zero - one == zero,
+        one - zero == one,
+        one - one == zero
     );
 
     test_binary_op!(
         zero * zero == zero,
-        zero * one  == zero,
-        one  * zero == zero,
-        one  * one  == one
+        zero * one == zero,
+        one * zero == zero,
+        one * one == one
     );
 
     test_exprs!( @ipv4 {
@@ -562,22 +542,17 @@ mod tests {
 
     #[test]
     fn dups() -> TestResult {
-        let s: PrefixSet<Ipv4Prefix> = vec![
-            "27.0.0.0/22,22,24",
-            "27.0.4.0/22,22,23",
-        ].into();
+        let s: PrefixSet<Ipv4Prefix> = vec!["27.0.0.0/22,22,24", "27.0.4.0/22,22,23"].into();
         dbg!(&s);
         assert_eq!(s.iter_prefixes().count(), 10);
-        let t: PrefixSet<Ipv4Prefix> = vec![
-            "27.0.0.0/24,24,24",
-            "27.0.4.0/22,22,24"
-        ].into();
+        let t: PrefixSet<Ipv4Prefix> = vec!["27.0.0.0/24,24,24", "27.0.4.0/22,22,24"].into();
         dbg!(&t);
         assert_eq!(t.iter_prefixes().count(), 8);
         let st = s.clone() - t.clone();
         dbg!(&st);
         assert_eq!(st.iter_prefixes().count(), 6);
-        t.iter_prefixes().for_each(|p| assert!(!st.contains(p.to_owned())));
+        t.iter_prefixes()
+            .for_each(|p| assert!(!st.contains(p.to_owned())));
         // let ts = t.clone() | s.clone();
         // dbg!(&ts);
         // assert_eq!(ts.iter_prefixes().count(), 129);

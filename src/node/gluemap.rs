@@ -1,27 +1,12 @@
 use std::fmt;
 use std::iter::Sum;
 use std::ops::{
-    BitAnd,
-    BitAndAssign,
-    BitOr,
-    BitOrAssign,
-    Not,
-    Add,
-    Mul,
-    Shl,
-    ShlAssign,
-    Shr,
-    ShrAssign,
+    Add, BitAnd, BitAndAssign, BitOr, BitOrAssign, Mul, Not, Shl, ShlAssign, Shr, ShrAssign,
 };
 
 use num::{
-    PrimInt,
-    One,
-    Zero,
-    traits::{
-        CheckedShl,
-        CheckedShr,
-    },
+    traits::{CheckedShl, CheckedShr},
+    One, PrimInt, Zero,
 };
 
 use crate::prefix::{IpPrefix, IpPrefixRange};
@@ -127,7 +112,7 @@ impl<P: IpPrefix> Shl<u8> for GlueMap<P> {
             None => Self {
                 bitmap: P::BitMap::zero(),
                 hostbit: true,
-            }
+            },
         }
     }
 }
@@ -143,17 +128,20 @@ impl<P: IpPrefix> Shr<u8> for GlueMap<P> {
 
     fn shr(self, rhs: u8) -> Self::Output {
         let (hostbit, shifted_hostbit) = if self.hostbit && rhs > 0 {
-            (false, if rhs > P::MAX_LENGTH {
-                P::BitMap::zero()
-            } else {
-                P::BitMap::one() << P::MAX_LENGTH - rhs
-            })
+            (
+                false,
+                if rhs > P::MAX_LENGTH {
+                    P::BitMap::zero()
+                } else {
+                    P::BitMap::one() << P::MAX_LENGTH - rhs
+                },
+            )
         } else {
             (self.hostbit, P::BitMap::zero())
         };
         let shifted_bitmap = match self.bitmap.checked_shr(rhs.into()) {
             Some(result) => result,
-            None => P::BitMap::zero()
+            None => P::BitMap::zero(),
         };
         Self {
             bitmap: shifted_bitmap + shifted_hostbit,
@@ -171,9 +159,9 @@ impl<P: IpPrefix> ShrAssign<u8> for GlueMap<P> {
 impl<P: IpPrefix> Sum for GlueMap<P> {
     fn sum<I>(iter: I) -> Self
     where
-        I: Iterator<Item=Self>
+        I: Iterator<Item = Self>,
     {
-        iter.fold(Self::zero(), |acc, item| {acc + item})
+        iter.fold(Self::zero(), |acc, item| acc + item)
     }
 }
 
@@ -206,9 +194,7 @@ impl<P: IpPrefix> GlueMap<P> {
 
 impl<P: IpPrefix> From<IpPrefixRange<P>> for GlueMap<P> {
     fn from(r: IpPrefixRange<P>) -> Self {
-        r.range()
-            .map(|l| { Self::singleton(l) })
-            .sum()
+        r.range().map(|l| Self::singleton(l)).sum()
     }
 }
 
@@ -217,11 +203,7 @@ impl<P: IpPrefix> fmt::Debug for GlueMap<P> {
         f.debug_struct("GlueMap")
             .field(
                 "bitmap",
-                &format_args!(
-                    "{:#0w$b}",
-                    &self.bitmap,
-                    w = (P::MAX_LENGTH + 2).into()
-                )
+                &format_args!("{:#0w$b}", &self.bitmap, w = (P::MAX_LENGTH + 2).into()),
             )
             .field("hostbit", &self.hostbit)
             .finish()

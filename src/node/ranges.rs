@@ -4,7 +4,7 @@ use num::Zero;
 
 use crate::prefix::{IpPrefix, IpPrefixRange};
 
-use super::{Node, GlueMap};
+use super::{GlueMap, Node};
 
 #[derive(Debug)]
 pub struct NodeRangesIter<'a, P: IpPrefix> {
@@ -18,7 +18,7 @@ impl<'a, P: IpPrefix> From<&'a Node<P>> for NodeRangesIter<'a, P> {
         Self {
             this: node,
             map: node.gluemap.to_owned(),
-            last: 0
+            last: 0,
         }
     }
 }

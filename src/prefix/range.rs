@@ -18,13 +18,9 @@ impl<P: IpPrefix> IpPrefixRange<P> {
     pub fn new(base: P, lower: u8, upper: u8) -> Result<Self, Box<dyn Error>> {
         if base.length() > lower || lower > upper || upper > P::MAX_LENGTH {
             println!("base: {:?}, lower: {}, upper: {}", base, lower, upper);
-            return Err(Box::new(PrefixLenError))
+            return Err(Box::new(PrefixLenError));
         }
-        Ok(Self {
-            base,
-            lower,
-            upper
-        })
+        Ok(Self { base, lower, upper })
     }
 
     pub fn base(&self) -> &P {
@@ -45,11 +41,11 @@ impl<P: IpPrefix> FromStr for IpPrefixRange<P> {
                 let prefix = prefix_str.parse::<P>()?;
                 let (lower, upper) = match range_str.split_once(',') {
                     Some((l, u)) => (l.parse()?, u.parse()?),
-                    None => return Err(PrefixRangeParseErr(()).into())
+                    None => return Err(PrefixRangeParseErr(()).into()),
                 };
                 (prefix, lower, upper)
-            },
-            None => return Err(PrefixRangeParseErr(()).into())
+            }
+            None => return Err(PrefixRangeParseErr(()).into()),
         };
         Self::new(prefix, lower, upper)
     }
@@ -57,9 +53,7 @@ impl<P: IpPrefix> FromStr for IpPrefixRange<P> {
 
 impl<P: IpPrefix> PartialEq for IpPrefixRange<P> {
     fn eq(&self, other: &Self) -> bool {
-        self.base == other.base
-            && self.lower == other.lower
-            && self.upper == other.upper
+        self.base == other.base && self.lower == other.lower && self.upper == other.upper
     }
 }
 
@@ -90,17 +84,15 @@ impl<P: IpPrefix> Iterator for IpPrefixRangeIntoIter<P> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.current {
-            Some(current) => {
-                match current.next() {
-                    Some(item) => Some(item),
-                    None => {
-                        let next_length = current.length + 1;
-                        if next_length <= self.upper {
-                            self.current = Some(self.base.into_iter_subprefixes(next_length));
-                            self.current.as_mut()?.next()
-                        } else {
-                            None
-                        }
+            Some(current) => match current.next() {
+                Some(item) => Some(item),
+                None => {
+                    let next_length = current.length + 1;
+                    if next_length <= self.upper {
+                        self.current = Some(self.base.into_iter_subprefixes(next_length));
+                        self.current.as_mut()?.next()
+                    } else {
+                        None
                     }
                 }
             },
@@ -131,7 +123,7 @@ pub struct IpPrefixRangeIter<'a, P: IpPrefix> {
     base: &'a P,
     lower: u8,
     upper: u8,
-    current: Option<SubPrefixesIter<'a, P>>
+    current: Option<SubPrefixesIter<'a, P>>,
 }
 
 impl<'a, P: IpPrefix> Iterator for IpPrefixRangeIter<'a, P> {
@@ -139,17 +131,15 @@ impl<'a, P: IpPrefix> Iterator for IpPrefixRangeIter<'a, P> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.current {
-            Some(current) => {
-                match current.next() {
-                    Some(item) => Some(item),
-                    None => {
-                        let next_length = current.length + 1;
-                        if next_length <= self.upper {
-                            self.current = Some(self.base.iter_subprefixes(next_length));
-                            self.current.as_mut()?.next()
-                        } else {
-                            None
-                        }
+            Some(current) => match current.next() {
+                Some(item) => Some(item),
+                None => {
+                    let next_length = current.length + 1;
+                    if next_length <= self.upper {
+                        self.current = Some(self.base.iter_subprefixes(next_length));
+                        self.current.as_mut()?.next()
+                    } else {
+                        None
                     }
                 }
             },
@@ -163,16 +153,16 @@ impl<'a, P: IpPrefix> Iterator for IpPrefixRangeIter<'a, P> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Ipv4Prefix;
-    use crate::tests::{assert_none, TestResult};
     use super::IpPrefixRange;
+    use crate::tests::{assert_none, TestResult};
+    use crate::Ipv4Prefix;
 
     #[test]
     fn invalid_lower() -> TestResult {
         let p: Ipv4Prefix = "192.0.2.0/24".parse()?;
         match IpPrefixRange::new(p, 23, 24) {
             Err(_) => Ok(()),
-            Ok(_) => Err("Expected 'PrefixLenError'".into())
+            Ok(_) => Err("Expected 'PrefixLenError'".into()),
         }
     }
 
@@ -181,7 +171,7 @@ mod tests {
         let p: Ipv4Prefix = "192.0.2.0/24".parse()?;
         match IpPrefixRange::new(p, 23, 24) {
             Err(_) => Ok(()),
-            Ok(_) => Err("Expected 'PrefixLenError'".into())
+            Ok(_) => Err("Expected 'PrefixLenError'".into()),
         }
     }
 
@@ -190,7 +180,7 @@ mod tests {
         let p: Ipv4Prefix = "192.0.2.0/24".parse()?;
         match IpPrefixRange::new(p, 23, 24) {
             Err(_) => Ok(()),
-            Ok(_) => Err("Expected 'PrefixLenError'".into())
+            Ok(_) => Err("Expected 'PrefixLenError'".into()),
         }
     }
 

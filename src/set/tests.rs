@@ -1,5 +1,5 @@
-use crate::{IpPrefixRange, Ipv4Prefix};
 use crate::tests::{assert_none, TestResult};
+use crate::{IpPrefixRange, Ipv4Prefix};
 
 use super::PrefixSet;
 

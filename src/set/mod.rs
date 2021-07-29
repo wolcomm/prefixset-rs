@@ -17,23 +17,16 @@ pub struct PrefixSet<P: IpPrefix> {
 
 impl<P: IpPrefix> PrefixSet<P> {
     pub fn new() -> Self {
-        PrefixSet{
-            root: None
-        }
+        PrefixSet { root: None }
     }
 
     fn new_with_root(root: Option<Box<Node<P>>>) -> Self {
-        PrefixSet {
-            root
-        }
+        PrefixSet { root }
     }
 
     fn aggregate(&mut self) -> &mut Self {
         if let Some(root) = mem::take(&mut self.root) {
-            self.root = root
-                .deduplicate(None)
-                .aggregate()
-                .compress();
+            self.root = root.deduplicate(None).aggregate().compress();
         }
         self
     }
@@ -51,7 +44,6 @@ impl<P: IpPrefix> PrefixSet<P> {
         self
     }
 
-
     fn add_singleton(&mut self, prefix: P) -> &mut Self {
         let new = Box::new(Node::new_singleton(prefix));
         self.add_node(new)
@@ -68,10 +60,10 @@ impl<P: IpPrefix> PrefixSet<P> {
 
     pub fn add_prefixes_from<I>(&mut self, iter: I) -> &mut Self
     where
-        I: IntoIterator<Item=P>,
+        I: IntoIterator<Item = P>,
     {
         iter.into_iter()
-            .fold(self, |set, p| { set.add_singleton(p) })
+            .fold(self, |set, p| set.add_singleton(p))
             .aggregate()
     }
 
@@ -81,10 +73,10 @@ impl<P: IpPrefix> PrefixSet<P> {
 
     pub fn add_prefix_ranges_from<I>(&mut self, iter: I) -> &mut Self
     where
-        I: IntoIterator<Item=IpPrefixRange<P>>
+        I: IntoIterator<Item = IpPrefixRange<P>>,
     {
         iter.into_iter()
-            .fold(self, |set, r| { set.add_range(r) })
+            .fold(self, |set, r| set.add_range(r))
             .aggregate()
     }
 
@@ -111,10 +103,10 @@ impl<P: IpPrefix> PrefixSet<P> {
 
     pub fn remove_prefixes_from<I>(&mut self, iter: I) -> &mut Self
     where
-        I: IntoIterator<Item=P>,
+        I: IntoIterator<Item = P>,
     {
         iter.into_iter()
-            .fold(self, |set, p| { set.remove_singleton(p) })
+            .fold(self, |set, p| set.remove_singleton(p))
             .aggregate()
     }
 
@@ -124,10 +116,10 @@ impl<P: IpPrefix> PrefixSet<P> {
 
     pub fn remove_prefix_ranges_from<I>(&mut self, iter: I) -> &mut Self
     where
-        I: IntoIterator<Item=IpPrefixRange<P>>,
+        I: IntoIterator<Item = IpPrefixRange<P>>,
     {
         iter.into_iter()
-            .fold(self, |set, r| { set.remove_range(r) })
+            .fold(self, |set, r| set.remove_range(r))
             .aggregate()
     }
 

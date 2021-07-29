@@ -8,39 +8,32 @@ use std::str::FromStr;
 use ipnet::AddrParseError;
 
 use num::{
-    PrimInt,
-    One,
-    Zero,
-    traits::{
-        CheckedShl,
-        CheckedShr,
-    },
+    traits::{CheckedShl, CheckedShr},
+    One, PrimInt, Zero,
 };
 
 pub trait IpPrefix
 where
-    Self:
-        std::fmt::Debug +
-        std::fmt::Display +
-        Copy +
-        FromStr<Err=AddrParseError> +
-        PartialEq +
-        Eq +
-        Hash,
-    Self::BitMap:
-        PrimInt +
-        CheckedShl +
-        CheckedShr +
-        Binary +
-        AddAssign +
-        BitAndAssign +
-        BitOrAssign +
-        std::fmt::Debug +
-        Shl<u8, Output=Self::BitMap> +
-        ShlAssign +
-        Shr<u8, Output=Self::BitMap> +
-        ShrAssign<u8> +
-        Sum,
+    Self: std::fmt::Debug
+        + std::fmt::Display
+        + Copy
+        + FromStr<Err = AddrParseError>
+        + PartialEq
+        + Eq
+        + Hash,
+    Self::BitMap: PrimInt
+        + CheckedShl
+        + CheckedShr
+        + Binary
+        + AddAssign
+        + BitAndAssign
+        + BitOrAssign
+        + std::fmt::Debug
+        + Shl<u8, Output = Self::BitMap>
+        + ShlAssign
+        + Shr<u8, Output = Self::BitMap>
+        + ShrAssign<u8>
+        + Sum,
 {
     type BitMap;
 
@@ -68,15 +61,15 @@ where
             length: length,
             next_index: Self::BitMap::zero(),
             max_index: match (!Self::BitMap::zero())
-                .checked_shr((Self::MAX_LENGTH - length + self.length()).into()) {
-                    Some(i) => i,
-                    None => Self::BitMap::zero(),
-                },
-            step: match Self::BitMap::one()
-                .checked_shl((Self::MAX_LENGTH - length).into()) {
-                    Some(s) => s,
-                    None => Self::BitMap::zero(),
-                },
+                .checked_shr((Self::MAX_LENGTH - length + self.length()).into())
+            {
+                Some(i) => i,
+                None => Self::BitMap::zero(),
+            },
+            step: match Self::BitMap::one().checked_shl((Self::MAX_LENGTH - length).into()) {
+                Some(s) => s,
+                None => Self::BitMap::zero(),
+            },
         }
     }
 }
@@ -95,7 +88,7 @@ impl<P: IpPrefix> Iterator for SubPrefixesIntoIter<P> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if !(self.base.length() <= self.length && self.length <= P::MAX_LENGTH) {
-            return None
+            return None;
         }
         // dbg!(&self);
         // let max_index = P::BitMap::one() << (self.length - self.base.length());
@@ -129,7 +122,7 @@ impl<'a, P: IpPrefix> Iterator for SubPrefixesIter<'a, P> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if !(self.base.length() <= self.length && self.length <= P::MAX_LENGTH) {
-            return None
+            return None;
         }
         let max_index = P::BitMap::one() << (self.length - self.base.length());
         if self.next_index < max_index {
@@ -144,9 +137,9 @@ impl<'a, P: IpPrefix> Iterator for SubPrefixesIter<'a, P> {
     }
 }
 
-pub use range::{IpPrefixRange, IpPrefixRangeIntoIter, IpPrefixRangeIter};
 pub use ipv4::Ipv4Prefix;
 pub use ipv6::Ipv6Prefix;
+pub use range::{IpPrefixRange, IpPrefixRangeIntoIter, IpPrefixRangeIter};
 
 mod ipv4;
 mod ipv6;

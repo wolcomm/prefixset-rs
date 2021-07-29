@@ -5,8 +5,8 @@ use std::ops::Deref;
 use itertools::Itertools;
 use num::PrimInt;
 use proptest::{
-    prelude::*,
     arbitrary::{ParamsFor, StrategyFor},
+    prelude::*,
 };
 
 use prefixset::{IpPrefix, Ipv4Prefix, Ipv6Prefix, PrefixSet};
@@ -36,9 +36,7 @@ where
             .prop_flat_map(|bits| {
                 let min_length = P::MAX_LENGTH - bits.trailing_zeros() as u8;
                 (Just(bits), min_length..=P::MAX_LENGTH)
-                    .prop_map(|(addr, length)| {
-                        TestPrefix(P::new(addr, length).unwrap())
-                    })
+                    .prop_map(|(addr, length)| TestPrefix(P::new(addr, length).unwrap()))
             })
             .boxed()
     }
@@ -53,7 +51,7 @@ struct TestPrefixSet<P: IpPrefix> {
 impl<P: IpPrefix> FromIterator<TestPrefix<P>> for TestPrefixSet<P> {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item=TestPrefix<P>>
+        I: IntoIterator<Item = TestPrefix<P>>,
     {
         let (ps_iter, cs_iter) = iter.into_iter().tee();
         let ps = ps_iter.into_iter().map(|p| *p).collect();

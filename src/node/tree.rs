@@ -14,7 +14,7 @@ impl<P: IpPrefix> Default for NodeTreeIter<'_, P> {
         Self {
             this: None,
             parent: None,
-            children: Vec::default()
+            children: Vec::default(),
         }
     }
 }
@@ -34,7 +34,7 @@ impl<'a, P: IpPrefix> Iterator for NodeTreeIter<'a, P> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(this) = self.this.take() {
-            return Some(this)
+            return Some(this);
         }
         while let Some(maybe_child) = self.children.pop() {
             if let Some(child) = maybe_child {
@@ -43,9 +43,9 @@ impl<'a, P: IpPrefix> Iterator for NodeTreeIter<'a, P> {
                 let mut child_iter = child.into_iter();
                 child_iter.parent = Some(Box::new(std::mem::take(self)));
                 *self = child_iter;
-                return self.next()
+                return self.next();
             }
-        };
+        }
         // No children left, recurse over parent
         if let Some(parent) = self.parent.take() {
             *self = *parent;

@@ -1,5 +1,5 @@
-use crate::tests::TestResult;
 use super::{IpPrefix, Ipv4Prefix, Ipv6Prefix};
+use crate::tests::TestResult;
 
 mod ipv4_prefix_from_str {
     use super::*;
@@ -25,10 +25,7 @@ mod ipv4_prefix_from_str {
     #[test]
     fn has_expected_subprefixes() -> TestResult {
         let p = setup();
-        assert_eq!(
-            p.into_iter_subprefixes(16).count(),
-            256,
-        );
+        assert_eq!(p.into_iter_subprefixes(16).count(), 256,);
         Ok(())
     }
 
@@ -81,10 +78,7 @@ mod ipv6_prefix_from_str {
     #[test]
     fn has_expected_subprefixes() -> TestResult {
         let p = setup();
-        assert_eq!(
-            p.into_iter_subprefixes(48).count(),
-            1 << 16,
-        );
+        assert_eq!(p.into_iter_subprefixes(48).count(), 1 << 16,);
         Ok(())
     }
 

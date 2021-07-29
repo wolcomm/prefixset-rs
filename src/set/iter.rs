@@ -13,8 +13,8 @@ impl<'a, P: IpPrefix> From<&'a PrefixSet<P>> for PrefixRangeIter<'a, P> {
     fn from(s: &'a PrefixSet<P>) -> Self {
         Self {
             tree_iter: match s.root {
-                  Some(ref root) => Some(root.iter_subtree()),
-                  None => None,
+                Some(ref root) => Some(root.iter_subtree()),
+                None => None,
             },
             ranges_iter: None,
         }
@@ -38,7 +38,7 @@ impl<'a, P: IpPrefix> Iterator for PrefixRangeIter<'a, P> {
                     None => return None,
                 }
             } else {
-                return None
+                return None;
             }
         }
     }

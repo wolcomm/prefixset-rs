@@ -2,7 +2,7 @@ use std::cmp::min;
 use std::convert::TryInto;
 use std::ops::{BitAnd, BitOr, Sub};
 
-use num::{PrimInt, One, Zero};
+use num::{One, PrimInt, Zero};
 
 use crate::prefix::{IpPrefix, IpPrefixRange};
 
@@ -32,7 +32,7 @@ pub struct Node<P: IpPrefix> {
 
 impl<P: IpPrefix> Node<P> {
     fn new(prefix: P, gluemap: GlueMap<P>) -> Self {
-        Node{
+        Node {
             prefix,
             gluemap,
             left: None,
@@ -53,10 +53,7 @@ impl<P: IpPrefix> Node<P> {
     }
 
     pub fn detatched_clone(&self) -> Self {
-        Self::new(
-            self.prefix,
-            self.gluemap,
-        )
+        Self::new(self.prefix, self.gluemap)
     }
 
     pub fn prefix(&self) -> &P {
@@ -74,7 +71,7 @@ impl<P: IpPrefix> Node<P> {
                     self = self.add(child);
                 }
                 self
-            },
+            }
             Comparison::ChildOf(common) => {
                 // mask glue map for prefix lengths already present
                 other.gluemap &= !self.gluemap;
@@ -86,7 +83,7 @@ impl<P: IpPrefix> Node<P> {
                         } else {
                             self.left = Some(other);
                         }
-                    },
+                    }
                     Direction::Right => {
                         if let Some(child) = self.right {
                             let new_child = child.add(other);
@@ -94,10 +91,10 @@ impl<P: IpPrefix> Node<P> {
                         } else {
                             self.right = Some(other);
                         }
-                    },
+                    }
                 };
                 self
-            },
+            }
             Comparison::ParentOf(common) => {
                 self.gluemap &= !other.gluemap;
                 match self.branch_direction(common) {
@@ -108,7 +105,7 @@ impl<P: IpPrefix> Node<P> {
                         } else {
                             other.left = Some(self);
                         }
-                    },
+                    }
                     Direction::Right => {
                         if let Some(child) = other.right {
                             let new_child = child.add(self);
@@ -128,14 +125,14 @@ impl<P: IpPrefix> Node<P> {
                     Direction::Left => {
                         glue.left = Some(self);
                         glue.right = Some(other);
-                    },
+                    }
                     Direction::Right => {
                         glue.left = Some(other);
                         glue.right = Some(self);
                     }
                 };
                 glue
-            },
+            }
         }
     }
 
@@ -171,7 +168,7 @@ impl<P: IpPrefix> Node<P> {
                 if let Some(child) = self.right.take() {
                     self.right = Some(child.remove(other));
                 };
-            },
+            }
             Comparison::ChildOf(common) => {
                 // if trace { dbg!(&self.gluemap, &other.gluemap); }
                 let deaggr_mask = self.gluemap & other.gluemap;
@@ -182,9 +179,11 @@ impl<P: IpPrefix> Node<P> {
                     //     dbg!(&self.gluemap);
                     //     println!("deaggregating...")
                     // }
-                    self = self.prefix.into_iter_subprefixes(other.prefix.length())
-                        .map(|p| {Box::new(Self::new(p, deaggr_mask))})
-                        .fold(self, |this, n| {this.add(n)});
+                    self = self
+                        .prefix
+                        .into_iter_subprefixes(other.prefix.length())
+                        .map(|p| Box::new(Self::new(p, deaggr_mask)))
+                        .fold(self, |this, n| this.add(n));
                     // if trace { dbg!(&self); }
                 }
                 match other.branch_direction(common) {
@@ -196,15 +195,15 @@ impl<P: IpPrefix> Node<P> {
                             // }
                             self.left = Some(child.remove(other));
                         };
-                    },
+                    }
                     Direction::Right => {
                         if let Some(child) = self.right.take() {
                             self.right = Some(child.remove(other));
                         };
-                    },
+                    }
                 }
-            },
-            _ => ()
+            }
+            _ => (),
         };
         // if trace { dbg!(&self); }
         self
@@ -234,8 +233,7 @@ impl<P: IpPrefix> Node<P> {
         };
         let aggr_length = self.prefix().length() + 1;
         if let (Some(l), Some(r)) = (&mut self.left, &mut self.right) {
-            if l.prefix().length() == aggr_length
-            && r.prefix().length() == aggr_length {
+            if l.prefix().length() == aggr_length && r.prefix().length() == aggr_length {
                 let aggr_bits = l.gluemap & r.gluemap;
                 l.gluemap &= !aggr_bits;
                 r.gluemap &= !aggr_bits;
@@ -257,7 +255,7 @@ impl<P: IpPrefix> Node<P> {
                 (None, None) => None,
                 (Some(_), None) => Some(self.left.unwrap()),
                 (None, Some(_)) => Some(self.right.unwrap()),
-                _ => Some(self)
+                _ => Some(self),
             }
         } else {
             Some(self)
@@ -267,28 +265,27 @@ impl<P: IpPrefix> Node<P> {
     pub fn search(&self, qnode: &Self) -> Option<&Self> {
         match self.compare_with(qnode) {
             Comparison::Equal | Comparison::ChildOf(_)
-                if self.gluemap & qnode.gluemap == qnode.gluemap => {
-                    Some(self)
-            },
-            Comparison::ChildOf(common) => {
-                match qnode.branch_direction(common) {
-                    Direction::Left => {
-                        if let Some(child) = &self.left {
-                            child.search(qnode)
-                        } else {
-                            None
-                        }
-                    },
-                    Direction::Right => {
-                        if let Some(child) = &self.right {
-                            child.search(qnode)
-                        } else {
-                            None
-                        }
-                    },
+                if self.gluemap & qnode.gluemap == qnode.gluemap =>
+            {
+                Some(self)
+            }
+            Comparison::ChildOf(common) => match qnode.branch_direction(common) {
+                Direction::Left => {
+                    if let Some(child) = &self.left {
+                        child.search(qnode)
+                    } else {
+                        None
+                    }
+                }
+                Direction::Right => {
+                    if let Some(child) = &self.right {
+                        child.search(qnode)
+                    } else {
+                        None
+                    }
                 }
             },
-            _ => None
+            _ => None,
         }
     }
 
@@ -301,10 +298,7 @@ impl<P: IpPrefix> Node<P> {
                 } else {
                     self.prefix().to_owned()
                 };
-                let mut new = Box::new(Node::new(
-                    prefix,
-                    self.gluemap & qnode.gluemap,
-                ));
+                let mut new = Box::new(Node::new(prefix, self.gluemap & qnode.gluemap));
                 if let Some(child) = &self.left {
                     if let Some(intersect_child) = child.intersect_nodes(qnode) {
                         new = new.add(intersect_child);
@@ -381,17 +375,15 @@ impl<P: IpPrefix> BitAnd for Box<Node<P>> {
 
     fn bitand(self, rhs: Self) -> Self::Output {
         self.iter_subtree()
-            .fold(None, |root, node| {
-                match rhs.intersect_nodes(node) {
-                    Some(new) => {
-                        if let Some(root) = root {
-                            Some(root.add(new))
-                        } else {
-                            Some(new)
-                        }
-                    },
-                    None => root
+            .fold(None, |root, node| match rhs.intersect_nodes(node) {
+                Some(new) => {
+                    if let Some(root) = root {
+                        Some(root.add(new))
+                    } else {
+                        Some(new)
+                    }
                 }
+                None => root,
             })
     }
 }

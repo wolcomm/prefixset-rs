@@ -1,7 +1,7 @@
 extern crate itertools;
 extern crate utils;
 
-use utils::{DataSet, data_sets};
+use utils::{data_sets, DataSet};
 
 use std::iter::FromIterator;
 use std::str::FromStr;
@@ -40,9 +40,7 @@ where
             let prefixes = ds.read();
             g.throughput(Throughput::Elements(prefixes.len() as u64));
             g.bench_function(ds.name(), |b| {
-                b.iter(|| -> PrefixSet<Self> {
-                    prefixes.to_owned().into_iter().collect()
-                })
+                b.iter(|| -> PrefixSet<Self> { prefixes.to_owned().into_iter().collect() })
             });
         }
         g.finish()
@@ -56,11 +54,9 @@ where
             let set: PrefixSet<Self> = ds.read().into_iter().collect();
             g.throughput(Throughput::Elements(ds.ranges() as u64));
             g.bench_function(ds.name(), |b| {
-                b.iter(|| {
-                    assert_eq!(set.iter_prefix_ranges().count(), ds.ranges())
-                })
+                b.iter(|| assert_eq!(set.iter_prefix_ranges().count(), ds.ranges()))
             });
-        };
+        }
         g.finish()
     }
 
@@ -72,11 +68,9 @@ where
             let set: PrefixSet<Self> = ds.read().into_iter().collect();
             g.throughput(Throughput::Elements(ds.prefixes() as u64));
             g.bench_function(ds.name(), |b| {
-                b.iter(|| {
-                    assert_eq!(set.iter_prefixes().count(), ds.prefixes())
-                })
+                b.iter(|| assert_eq!(set.iter_prefixes().count(), ds.prefixes()))
             });
-        };
+        }
         g.finish()
     }
 
@@ -92,9 +86,7 @@ where
                 let name = format!("{} & {}", x.name(), y.name());
                 let s: PrefixSet<_> = x.read().into_iter().collect();
                 let t: PrefixSet<_> = y.read().into_iter().collect();
-                g.bench_function(name, |b| {
-                    b.iter(|| s.clone() & t.clone())
-                });
+                g.bench_function(name, |b| b.iter(|| s.clone() & t.clone()));
             });
         g.finish()
     }
@@ -111,9 +103,7 @@ where
                 let name = format!("{} | {}", x.name(), y.name());
                 let s: PrefixSet<_> = x.read().into_iter().collect();
                 let t: PrefixSet<_> = y.read().into_iter().collect();
-                g.bench_function(name, |b| {
-                    b.iter(|| s.clone() | t.clone())
-                });
+                g.bench_function(name, |b| b.iter(|| s.clone() | t.clone()));
             });
         g.finish()
     }
@@ -130,9 +120,7 @@ where
                 let name = format!("{} ^ {}", x.name(), y.name());
                 let s: PrefixSet<_> = x.read().into_iter().collect();
                 let t: PrefixSet<_> = y.read().into_iter().collect();
-                g.bench_function(name, |b| {
-                    b.iter(|| s.clone() ^ t.clone())
-                });
+                g.bench_function(name, |b| b.iter(|| s.clone() ^ t.clone()));
             });
         g.finish()
     }
