@@ -8,5 +8,10 @@ mod set;
 #[cfg(test)]
 mod tests;
 
-pub use crate::prefix::{IpPrefix, Ipv4Prefix, Ipv6Prefix};
+pub use crate::prefix::{
+    IpPrefix,
+    IpPrefixRange,
+    Ipv4Prefix,
+    Ipv6Prefix,
+};
 pub use crate::set::PrefixSet;

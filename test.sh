@@ -22,6 +22,7 @@ _coverage() {
     cargo="cargo +nightly"
     output=".coverage"
 
+    export LLVM_PROFILE_FILE="grcov-%p-%m.profraw"
     export RUSTFLAGS="-Zinstrument-coverage"
 
     ${cargo} clean

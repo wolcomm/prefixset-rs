@@ -1,97 +1,173 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+extern crate itertools;
+extern crate utils;
+
+use utils::{DataSet, data_sets};
+
+use std::iter::FromIterator;
 use std::str::FromStr;
 use std::time::Duration;
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_main, Criterion, Throughput};
+use itertools::Itertools;
 
-use prefixset::{IpPrefix, Ipv4Prefix, Ipv6Prefix, PrefixSet};
+use prefixset::{IpPrefix, IpPrefixRange, Ipv4Prefix, Ipv6Prefix, PrefixSet};
 
-trait BenchHelper
+trait BenchHelper<'a, T>
 where
+    T: 'a + Clone + FromStr,
+    <T as FromStr>::Err: std::fmt::Debug,
     Self: IpPrefix,
     <Self as FromStr>::Err: std::fmt::Debug,
+    PrefixSet<Self>: FromIterator<T>,
 {
-    const DATA_SETS: [(u32, &'static str); 1];
+    const DATA_SETS: &'a [DataSet<T>];
 
-    fn read_prefixes(data_set: &str) -> Vec<Self> {
-        let path = format!("./benches/data/{}.txt", data_set);
-        let file = File::open(path).unwrap();
-        BufReader::new(file)
-            .lines()
-            .into_iter()
-            .map(|line| line.unwrap().parse::<Self>().unwrap())
-            .collect()
+    fn benches(mut c: &mut Criterion) {
+        Self::construct(&mut c);
+        Self::iterate_prefix_ranges(&mut c);
+        Self::iterate_prefixes(&mut c);
+        Self::compute_intersection(&mut c);
+        Self::compute_union(&mut c);
+        Self::compute_difference(&mut c);
     }
 
-    fn construct_set(prefixes: &Vec<Self>) -> PrefixSet<Self> {
-        let mut set = PrefixSet::new();
-        for prefix in prefixes {
-            set.add(prefix.to_owned()).unwrap();
-        }
-        set
-    }
-
-    fn iterate_set(set: PrefixSet<Self>, expected: u32) {
-        let mut i = 0u32;
-        set.into_iter().for_each(|_| i += 1);
-        assert_eq!(i, expected)
-    }
-}
-
-impl BenchHelper for Ipv4Prefix {
-    const DATA_SETS: [(u32, &'static str); 1] = [
-        (725492, "AS-WOLCOMM-IPv4-NONAGG")
-    ];
-}
-impl BenchHelper for Ipv6Prefix {
-    const DATA_SETS: [(u32, &'static str); 1] = [
-        (273873, "AS-WOLCOMM-IPv6-NONAGG")
-    ];
-}
-
-trait BenchTest
-where
-    Self: BenchHelper,
-    <Self as FromStr>::Err: std::fmt::Debug,
-{
     fn construct(c: &mut Criterion) {
-        let mut g = c.benchmark_group("PrefixSet construction");
+        let mut g = c.benchmark_group("construction");
         g.measurement_time(Duration::from_secs(30));
         g.sample_size(50);
 
-        for (_, data_set) in Self::DATA_SETS {
-            let prefixes = Self::read_prefixes(data_set);
-            g.bench_function(data_set, |b| {
-                b.iter( || Self::construct_set(&prefixes))
+        for ds in Self::DATA_SETS {
+            let prefixes = ds.read();
+            g.throughput(Throughput::Elements(prefixes.len() as u64));
+            g.bench_function(ds.name(), |b| {
+                b.iter(|| -> PrefixSet<Self> {
+                    prefixes.to_owned().into_iter().collect()
+                })
             });
         }
         g.finish()
     }
 
-    fn iterate(c: &mut Criterion) {
-        let mut g = c.benchmark_group("PrefixSet iteration");
+    fn iterate_prefix_ranges(c: &mut Criterion) {
+        let mut g = c.benchmark_group("prefix range iteration");
         g.measurement_time(Duration::from_secs(10));
 
-        for (items, data_set) in Self::DATA_SETS {
-            let prefixes = Self::read_prefixes(data_set);
-            let set = Self::construct_set(&prefixes);
-            g.bench_function(data_set, |b| {
-                b.iter(|| Self::iterate_set(set.clone(), items))
+        for ds in Self::DATA_SETS {
+            let set: PrefixSet<Self> = ds.read().into_iter().collect();
+            g.throughput(Throughput::Elements(ds.ranges() as u64));
+            g.bench_function(ds.name(), |b| {
+                b.iter(|| {
+                    assert_eq!(set.iter_prefix_ranges().count(), ds.ranges())
+                })
             });
         };
         g.finish()
     }
+
+    fn iterate_prefixes(c: &mut Criterion) {
+        let mut g = c.benchmark_group("prefix iteration");
+        g.measurement_time(Duration::from_secs(10));
+
+        for ds in Self::DATA_SETS {
+            let set: PrefixSet<Self> = ds.read().into_iter().collect();
+            g.throughput(Throughput::Elements(ds.prefixes() as u64));
+            g.bench_function(ds.name(), |b| {
+                b.iter(|| {
+                    assert_eq!(set.iter_prefixes().count(), ds.prefixes())
+                })
+            });
+        };
+        g.finish()
+    }
+
+    fn compute_intersection(c: &mut Criterion) {
+        let mut g = c.benchmark_group("intersection computation");
+        g.measurement_time(Duration::from_secs(30));
+        g.sample_size(20);
+
+        Self::DATA_SETS
+            .iter()
+            .tuple_combinations()
+            .for_each(|(x, y)| {
+                let name = format!("{} & {}", x.name(), y.name());
+                let s: PrefixSet<_> = x.read().into_iter().collect();
+                let t: PrefixSet<_> = y.read().into_iter().collect();
+                g.bench_function(name, |b| {
+                    b.iter(|| s.clone() & t.clone())
+                });
+            });
+        g.finish()
+    }
+
+    fn compute_union(c: &mut Criterion) {
+        let mut g = c.benchmark_group("union computation");
+        g.measurement_time(Duration::from_secs(30));
+        g.sample_size(20);
+
+        Self::DATA_SETS
+            .iter()
+            .tuple_combinations()
+            .for_each(|(x, y)| {
+                let name = format!("{} | {}", x.name(), y.name());
+                let s: PrefixSet<_> = x.read().into_iter().collect();
+                let t: PrefixSet<_> = y.read().into_iter().collect();
+                g.bench_function(name, |b| {
+                    b.iter(|| s.clone() | t.clone())
+                });
+            });
+        g.finish()
+    }
+
+    fn compute_difference(c: &mut Criterion) {
+        let mut g = c.benchmark_group("difference computation");
+        g.measurement_time(Duration::from_secs(30));
+        g.sample_size(20);
+
+        Self::DATA_SETS
+            .iter()
+            .tuple_combinations()
+            .for_each(|(x, y)| {
+                let name = format!("{} ^ {}", x.name(), y.name());
+                let s: PrefixSet<_> = x.read().into_iter().collect();
+                let t: PrefixSet<_> = y.read().into_iter().collect();
+                g.bench_function(name, |b| {
+                    b.iter(|| s.clone() ^ t.clone())
+                });
+            });
+        g.finish()
+    }
 }
 
-impl BenchTest for Ipv4Prefix {}
-impl BenchTest for Ipv6Prefix {}
+impl<'a> BenchHelper<'a, Ipv4Prefix> for Ipv4Prefix {
+    const DATA_SETS: &'a [DataSet<Ipv4Prefix>] = data_sets!(
+        name = "AS-WOLCOMM-ipv4-prefixes", prefixes = 755053, ranges = 163330;
+        name = "AS-HURRICANE-ipv4-prefixes", prefixes = 817756, ranges = 145101;
+    );
+}
+impl<'a> BenchHelper<'a, IpPrefixRange<Ipv4Prefix>> for Ipv4Prefix {
+    const DATA_SETS: &'a [DataSet<IpPrefixRange<Ipv4Prefix>>] = data_sets!(
+        name = "AS-WOLCOMM-ipv4-ranges", prefixes = 755053, ranges = 163330;
+        name = "AS-HURRICANE-ipv4-ranges", prefixes = 817756, ranges = 145101;
+    );
+}
+impl<'a> BenchHelper<'a, Ipv6Prefix> for Ipv6Prefix {
+    const DATA_SETS: &'a [DataSet<Ipv6Prefix>] = data_sets!(
+        name = "AS-WOLCOMM-ipv6-prefixes", prefixes = 274714, ranges = 34740;
+        name = "AS-HURRICANE-ipv6-prefixes", prefixes = 218805, ranges = 24774;
+    );
+}
+impl<'a> BenchHelper<'a, IpPrefixRange<Ipv6Prefix>> for Ipv6Prefix {
+    const DATA_SETS: &'a [DataSet<IpPrefixRange<Ipv6Prefix>>] = data_sets!(
+        name = "AS-WOLCOMM-ipv6-ranges", prefixes = 274714, ranges = 34740;
+        name = "AS-HURRICANE-ipv6-ranges", prefixes = 218805, ranges = 24774;
+    );
+}
 
-criterion_group!(
-    benches,
-    Ipv4Prefix::construct,
-    Ipv4Prefix::iterate,
-    Ipv6Prefix::construct,
-    Ipv6Prefix::iterate,
-);
+fn benches() {
+    let mut c = Criterion::default().configure_from_args();
+    <Ipv4Prefix as BenchHelper<Ipv4Prefix>>::benches(&mut c);
+    <Ipv4Prefix as BenchHelper<IpPrefixRange<Ipv4Prefix>>>::benches(&mut c);
+    <Ipv6Prefix as BenchHelper<Ipv6Prefix>>::benches(&mut c);
+    <Ipv6Prefix as BenchHelper<IpPrefixRange<Ipv6Prefix>>>::benches(&mut c);
+}
 criterion_main!(benches);

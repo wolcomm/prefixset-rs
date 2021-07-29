@@ -7,14 +7,16 @@ edition = "2018"
 [lib]
 bench = false
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 ipnet = "^2.3"
 num = "^0.4"
 
 [dev-dependencies]
 criterion = {version = "^0.3", features = ["html_reports"]}
+itertools = "^0.10"
+paste = "^1.0"
+proptest = "^1.0"
+utils = {path = "utils"}
 
 [[bench]]
 name = "bench"
