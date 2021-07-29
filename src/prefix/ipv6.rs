@@ -1,12 +1,13 @@
 use std::error::Error;
 use std::fmt;
+use std::hash;
 use std::str::FromStr;
 
 use ipnet::{AddrParseError, Ipv6Net};
 
 use super::IpPrefix;
 
-#[derive(Clone, Copy, Debug, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Eq)]
 pub struct Ipv6Prefix {
     ipnet: Ipv6Net,
     bits: u128,
@@ -34,6 +35,16 @@ impl FromStr for Ipv6Prefix {
 impl PartialEq for Ipv6Prefix {
     fn eq(&self, other: &Self) -> bool {
         self.bits() == other.bits() && self.length() == other.length()
+    }
+}
+
+impl hash::Hash for Ipv6Prefix {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: hash::Hasher,
+    {
+        self.bits().hash(state);
+        self.length().hash(state);
     }
 }
 

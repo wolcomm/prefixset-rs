@@ -50,7 +50,7 @@ where
     fn iter_subprefixes(&self, length: u8) -> SubPrefixesIter<Self> {
         SubPrefixesIter {
             base: self,
-            length: length,
+            length,
             next_index: Self::BitMap::zero(),
         }
     }
@@ -58,7 +58,7 @@ where
     fn into_iter_subprefixes(self, length: u8) -> SubPrefixesIntoIter<Self> {
         SubPrefixesIntoIter {
             base: self,
-            length: length,
+            length,
             next_index: Self::BitMap::zero(),
             max_index: match (!Self::BitMap::zero())
                 .checked_shr((Self::MAX_LENGTH - length + self.length()).into())

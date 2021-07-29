@@ -126,10 +126,7 @@ impl<P: IpPrefix> PrefixSet<P> {
     pub fn contains(&self, prefix: P) -> bool {
         let qnode = Node::new_singleton(prefix);
         match &self.root {
-            Some(root) => match root.search(&qnode) {
-                Some(_) => true,
-                None => false,
-            },
+            Some(root) => root.search(&qnode).is_some(),
             None => false,
         }
     }
@@ -140,6 +137,12 @@ impl<P: IpPrefix> PrefixSet<P> {
 
     pub fn iter_prefixes(&self) -> PrefixIter<P> {
         self.into()
+    }
+}
+
+impl<P: IpPrefix> Default for PrefixSet<P> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

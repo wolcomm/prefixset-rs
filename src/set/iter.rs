@@ -12,10 +12,7 @@ pub struct PrefixRangeIter<'a, P: IpPrefix> {
 impl<'a, P: IpPrefix> From<&'a PrefixSet<P>> for PrefixRangeIter<'a, P> {
     fn from(s: &'a PrefixSet<P>) -> Self {
         Self {
-            tree_iter: match s.root {
-                Some(ref root) => Some(root.iter_subtree()),
-                None => None,
-            },
+            tree_iter: s.root.as_ref().map(|root| root.iter_subtree()),
             ranges_iter: None,
         }
     }

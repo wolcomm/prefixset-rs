@@ -210,7 +210,7 @@ impl<P: IpPrefix> Node<P> {
     }
 
     pub fn deduplicate(mut self: Box<Self>, mut mask: Option<GlueMap<P>>) -> Box<Self> {
-        if let None = mask {
+        if mask.is_none() {
             mask = Some(GlueMap::zero());
         }
         self.gluemap &= !mask.unwrap();
@@ -292,7 +292,7 @@ impl<P: IpPrefix> Node<P> {
     fn intersect_nodes(&self, qnode: &Self) -> Option<Box<Self>> {
         match self.compare_with(qnode) {
             Comparison::Divergent(_) => None,
-            cmp @ _ => {
+            cmp => {
                 let prefix = if let Comparison::ChildOf(_) = cmp {
                     qnode.prefix().to_owned()
                 } else {
@@ -359,6 +359,7 @@ impl<P: IpPrefix> Node<P> {
         self.into()
     }
 
+    #[allow(clippy::needless_lifetimes, clippy::borrowed_box)]
     pub fn iter_subtree<'a>(self: &'a Box<Self>) -> NodeTreeIter<'a, P> {
         self.into()
     }

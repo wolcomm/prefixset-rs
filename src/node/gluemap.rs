@@ -87,6 +87,7 @@ impl<P: IpPrefix> BitOrAssign for GlueMap<P> {
 impl<P: IpPrefix> Add for GlueMap<P> {
     type Output = Self;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn add(self, other: Self) -> Self::Output {
         self | other
     }
@@ -95,6 +96,7 @@ impl<P: IpPrefix> Add for GlueMap<P> {
 impl<P: IpPrefix> Mul for GlueMap<P> {
     type Output = Self;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn mul(self, other: Self) -> Self::Output {
         self & other
     }
@@ -133,7 +135,7 @@ impl<P: IpPrefix> Shr<u8> for GlueMap<P> {
                 if rhs > P::MAX_LENGTH {
                     P::BitMap::zero()
                 } else {
-                    P::BitMap::one() << P::MAX_LENGTH - rhs
+                    P::BitMap::one() << (P::MAX_LENGTH - rhs)
                 },
             )
         } else {
@@ -194,7 +196,7 @@ impl<P: IpPrefix> GlueMap<P> {
 
 impl<P: IpPrefix> From<IpPrefixRange<P>> for GlueMap<P> {
     fn from(r: IpPrefixRange<P>) -> Self {
-        r.range().map(|l| Self::singleton(l)).sum()
+        r.range().map(Self::singleton).sum()
     }
 }
 

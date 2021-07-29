@@ -222,7 +222,7 @@ mod tests {
         let r = IpPrefixRange::new(p, lower, upper)?;
         assert_eq!(
             r.into_iter().count(),
-            (lower..=upper).map(|l| { 1 << l - 24 }).sum()
+            (lower..=upper).map(|l| { 1 << (l - 24) }).sum()
         );
         Ok(())
     }

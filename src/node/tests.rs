@@ -5,13 +5,14 @@ use crate::{IpPrefix, IpPrefixRange, Ipv4Prefix, Ipv6Prefix};
 
 use super::{GlueMap, Node};
 
+#[allow(clippy::boxed_local)]
 fn subtree_size<P: IpPrefix>(root: Box<Node<P>>) -> usize {
     let mut i: usize = 0;
     root.walk(&mut |_| i += 1);
     i
 }
 
-fn is_glue<P: IpPrefix>(node: &Box<Node<P>>) -> bool {
+fn is_glue<P: IpPrefix>(node: &Node<P>) -> bool {
     node.gluemap.is_zero()
 }
 

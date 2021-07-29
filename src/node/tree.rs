@@ -3,6 +3,7 @@ use crate::prefix::IpPrefix;
 use super::Node;
 
 #[derive(Debug)]
+#[allow(clippy::borrowed_box)]
 pub struct NodeTreeIter<'a, P: IpPrefix> {
     this: Option<&'a Box<Node<P>>>,
     parent: Option<Box<NodeTreeIter<'a, P>>>,

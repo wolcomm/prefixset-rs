@@ -73,6 +73,7 @@ impl<P: IpPrefix> Not for PrefixSet<P> {
 impl<P: IpPrefix> Add for PrefixSet<P> {
     type Output = Self;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn add(self, rhs: Self) -> Self::Output {
         self | rhs
     }
@@ -94,6 +95,7 @@ impl<P: IpPrefix> Sub for PrefixSet<P> {
 impl<P: IpPrefix> Mul for PrefixSet<P> {
     type Output = Self;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn mul(self, rhs: Self) -> Self::Output {
         self & rhs
     }
