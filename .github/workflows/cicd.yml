@@ -99,23 +99,23 @@ jobs:
           name: ${{ matrix.rust }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  benchmark:
-    name: benchmark
-    needs: [check, test, lint]
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v2
-      - name: install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: bench
-        uses: actions-rs/cargo@v1
-        with:
-          command: bench
+  # benchmark:
+  #   name: benchmark
+  #   needs: [check, test, lint]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v2
+  #     - name: install rust
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
+  #         override: true
+  #     - name: bench
+  #       uses: actions-rs/cargo@v1
+  #       with:
+  #         command: bench
 
   coverage:
     name: coverage
