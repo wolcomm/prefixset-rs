@@ -49,6 +49,11 @@ jobs:
       fail-fast: false
       matrix:
         rust: [stable, nightly]
+        args:
+          - --lib
+          - --test integration
+          - --test hypothesis
+          - --doc
     steps:
       - name: checkout
         uses: actions/checkout@v2
