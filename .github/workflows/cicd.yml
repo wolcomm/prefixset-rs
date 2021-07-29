@@ -169,6 +169,8 @@ jobs:
 
   publish:
     name: publish
+    if: ${{ github.event_name == 'push' &&
+            startsWith(github.ref, 'refs/tag') }}
     needs: [benchmark, coverage]
     runs-on: ubuntu-latest
     steps:
