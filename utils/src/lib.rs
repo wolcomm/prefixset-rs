@@ -5,9 +5,9 @@ use std::str::FromStr;
 
 pub struct DataSet<T>(
     &'static str, // name
-    usize,  // prefixes
-    usize,  // ranges
-    PhantomData<*const T>
+    usize,        // prefixes
+    usize,        // ranges
+    PhantomData<*const T>,
 );
 
 pub const fn data_set<T>(name: &'static str, prefixes: usize, ranges: usize) -> DataSet<T> {
@@ -26,9 +26,15 @@ macro_rules! data_sets {
 }
 
 impl<T> DataSet<T> {
-    pub fn name(&self) -> &str { self.0 }
-    pub fn prefixes(&self) -> usize { self.1 }
-    pub fn ranges(&self) -> usize { self.2 }
+    pub fn name(&self) -> &str {
+        self.0
+    }
+    pub fn prefixes(&self) -> usize {
+        self.1
+    }
+    pub fn ranges(&self) -> usize {
+        self.2
+    }
 }
 
 impl<T> DataSet<T>
