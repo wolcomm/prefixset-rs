@@ -1,6 +1,5 @@
 use std::error::Error;
 use std::fmt;
-// use std::hash;
 use std::str::FromStr;
 
 use ipnet::{AddrParseError, Ipv6Net, PrefixLenError};
@@ -35,22 +34,6 @@ impl FromStr for Ipv6Prefix {
         Ok(s.parse::<Ipv6Net>()?.into())
     }
 }
-
-// impl PartialEq for Ipv6Prefix {
-//     fn eq(&self, other: &Self) -> bool {
-//         self.bits() == other.bits() && self.length() == other.length()
-//     }
-// }
-
-// impl hash::Hash for Ipv6Prefix {
-//     fn hash<H>(&self, state: &mut H)
-//     where
-//         H: hash::Hasher,
-//     {
-//         self.bits().hash(state);
-//         self.length().hash(state);
-//     }
-// }
 
 impl fmt::Display for Ipv6Prefix {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
