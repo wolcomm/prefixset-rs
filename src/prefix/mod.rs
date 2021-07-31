@@ -43,7 +43,14 @@ where
     fn new(addr: Self::BitMap, length: u8) -> Result<Self, Box<dyn Error>>;
     fn bits(&self) -> Self::BitMap;
     fn length(&self) -> u8;
-    fn new_from(&self, length: u8) -> Result<Self, Box<dyn Error>>;
+
+    fn new_from(&self, length: u8) -> Result<Self, Box<dyn Error>> {
+        let mask = match (!Self::BitMap::zero()).checked_shl((Self::MAX_LENGTH - length).into()) {
+            Some(m) => m,
+            None => Self::BitMap::zero(),
+        };
+        Self::new(self.bits() & mask, length)
+    }
 
     fn iter_subprefixes(&self, length: u8) -> SubPrefixesIntoIter<Self, &Self> {
         SubPrefixesIntoIter::new(self, length)

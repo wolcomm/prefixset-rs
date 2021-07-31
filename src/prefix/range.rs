@@ -7,7 +7,7 @@ use ipnet::PrefixLenError;
 
 use super::{IpPrefix, SubPrefixesIntoIter};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct IpPrefixRange<P: IpPrefix> {
     base: P,
     lower: u8,
