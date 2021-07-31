@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::error::Error;
 use std::fmt::Binary;
 use std::hash::Hash;
@@ -40,94 +41,71 @@ where
     const MAX_LENGTH: u8;
 
     fn new(addr: Self::BitMap, length: u8) -> Result<Self, Box<dyn Error>>;
-
     fn bits(&self) -> Self::BitMap;
-
     fn length(&self) -> u8;
-
     fn new_from(&self, length: u8) -> Result<Self, Box<dyn Error>>;
 
-    fn iter_subprefixes(&self, length: u8) -> SubPrefixesIter<Self> {
-        SubPrefixesIter {
-            base: self,
-            length,
-            next_index: Self::BitMap::zero(),
-        }
+    fn iter_subprefixes(&self, length: u8) -> SubPrefixesIntoIter<Self, &Self> {
+        SubPrefixesIntoIter::new(self, length)
     }
 
-    fn into_iter_subprefixes(self, length: u8) -> SubPrefixesIntoIter<Self> {
-        SubPrefixesIntoIter {
-            base: self,
-            length,
-            next_index: Self::BitMap::zero(),
-            max_index: match (!Self::BitMap::zero())
-                .checked_shr((Self::MAX_LENGTH - length + self.length()).into())
-            {
-                Some(i) => i,
-                None => Self::BitMap::zero(),
-            },
-            step: match Self::BitMap::one().checked_shl((Self::MAX_LENGTH - length).into()) {
-                Some(s) => s,
-                None => Self::BitMap::zero(),
-            },
-        }
+    fn into_iter_subprefixes(self, length: u8) -> SubPrefixesIntoIter<Self, Self> {
+        SubPrefixesIntoIter::new(self, length)
     }
 }
 
 #[derive(Debug)]
-pub struct SubPrefixesIntoIter<P: IpPrefix> {
-    base: P,
+pub struct SubPrefixesIntoIter<P, Q>
+where
+    P: IpPrefix,
+    Q: Borrow<P>,
+{
+    base: Q,
     length: u8,
-    next_index: P::BitMap,
     max_index: P::BitMap,
     step: P::BitMap,
+    next_index: P::BitMap,
 }
 
-impl<P: IpPrefix> Iterator for SubPrefixesIntoIter<P> {
-    type Item = P;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if !(self.base.length() <= self.length && self.length <= P::MAX_LENGTH) {
-            return None;
-        }
-        // dbg!(&self);
-        // let max_index = P::BitMap::one() << (self.length - self.base.length());
-        // let max_index = (!P::BitMap::zero()).checked_shr(P::MAX_LENGTH + self.base.length() - self.length);
-        if self.next_index <= self.max_index {
-            // let addr = if self.next_index.is_zero() {
-            //     self.base.bits()
-            // } else {
-            //     let step = P::BitMap::one() << (P::MAX_LENGTH - self.length);
-            //     self.base.bits() + (self.next_index * step)
-            // };
-            let addr = self.base.bits() + (self.next_index * self.step);
-            self.next_index += P::BitMap::one();
-            // safe to unwrap here, since we checked length above
-            Some(P::new(addr, self.length).unwrap())
-        } else {
-            None
+impl<P, Q> SubPrefixesIntoIter<P, Q>
+where
+    P: IpPrefix,
+    Q: Borrow<P>,
+{
+    fn new(base: Q, length: u8) -> Self {
+        let max_index = match (!P::BitMap::zero())
+            .checked_shr((P::MAX_LENGTH - length + base.borrow().length()).into())
+        {
+            Some(i) => i,
+            None => P::BitMap::zero(),
+        };
+        let step = match P::BitMap::one().checked_shl((P::MAX_LENGTH - length).into()) {
+            Some(s) => s,
+            None => P::BitMap::zero(),
+        };
+        Self {
+            base,
+            length,
+            max_index,
+            step,
+            next_index: P::BitMap::zero(),
         }
     }
 }
 
-#[derive(Debug)]
-pub struct SubPrefixesIter<'a, P: IpPrefix> {
-    base: &'a P,
-    length: u8,
-    next_index: P::BitMap,
-}
-
-impl<'a, P: IpPrefix> Iterator for SubPrefixesIter<'a, P> {
+impl<P, Q> Iterator for SubPrefixesIntoIter<P, Q>
+where
+    P: IpPrefix,
+    Q: Borrow<P>,
+{
     type Item = P;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if !(self.base.length() <= self.length && self.length <= P::MAX_LENGTH) {
+        if !(self.base.borrow().length() <= self.length && self.length <= P::MAX_LENGTH) {
             return None;
         }
-        let max_index = P::BitMap::one() << (self.length - self.base.length());
-        if self.next_index < max_index {
-            let step = P::BitMap::one() << (P::MAX_LENGTH - self.length);
-            let addr = self.base.bits() + (self.next_index * step);
+        if self.next_index <= self.max_index {
+            let addr = self.base.borrow().bits() + (self.next_index * self.step);
             self.next_index += P::BitMap::one();
             // safe to unwrap here, since we checked length above
             Some(P::new(addr, self.length).unwrap())

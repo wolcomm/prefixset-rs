@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use ipnet::PrefixLenError;
 
-use super::{IpPrefix, SubPrefixesIntoIter, SubPrefixesIter};
+use super::{IpPrefix, SubPrefixesIntoIter};
 
 #[derive(Clone, Debug)]
 pub struct IpPrefixRange<P: IpPrefix> {
@@ -76,7 +76,7 @@ pub struct IpPrefixRangeIntoIter<P: IpPrefix> {
     base: P,
     lower: u8,
     upper: u8,
-    current: Option<SubPrefixesIntoIter<P>>,
+    current: Option<SubPrefixesIntoIter<P, P>>,
 }
 
 impl<P: IpPrefix> Iterator for IpPrefixRangeIntoIter<P> {
@@ -123,7 +123,7 @@ pub struct IpPrefixRangeIter<'a, P: IpPrefix> {
     base: &'a P,
     lower: u8,
     upper: u8,
-    current: Option<SubPrefixesIter<'a, P>>,
+    current: Option<SubPrefixesIntoIter<P, &'a P>>,
 }
 
 impl<'a, P: IpPrefix> Iterator for IpPrefixRangeIter<'a, P> {
