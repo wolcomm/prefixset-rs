@@ -23,6 +23,7 @@ where
         + Eq
         + Hash,
     Self::BitMap: PrimInt
+        + Default
         + CheckedShl
         + CheckedShr
         + Binary
@@ -45,10 +46,9 @@ where
     fn length(&self) -> u8;
 
     fn new_from(&self, length: u8) -> Result<Self, Box<dyn Error>> {
-        let mask = match (!Self::BitMap::zero()).checked_shl((Self::MAX_LENGTH - length).into()) {
-            Some(m) => m,
-            None => Self::BitMap::zero(),
-        };
+        let mask = (!Self::BitMap::zero())
+            .checked_shl((Self::MAX_LENGTH - length).into())
+            .unwrap_or_default();
         Self::new(self.bits() & mask, length)
     }
 
@@ -80,16 +80,12 @@ where
     Q: Borrow<P>,
 {
     fn new(base: Q, length: u8) -> Self {
-        let max_index = match (!P::BitMap::zero())
+        let max_index = (!P::BitMap::zero())
             .checked_shr((P::MAX_LENGTH - length + base.borrow().length()).into())
-        {
-            Some(i) => i,
-            None => P::BitMap::zero(),
-        };
-        let step = match P::BitMap::one().checked_shl((P::MAX_LENGTH - length).into()) {
-            Some(s) => s,
-            None => P::BitMap::zero(),
-        };
+            .unwrap_or_default();
+        let step = P::BitMap::one()
+            .checked_shl((P::MAX_LENGTH - length).into())
+            .unwrap_or_default();
         Self {
             base,
             length,
