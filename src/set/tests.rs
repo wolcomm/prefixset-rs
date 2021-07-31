@@ -40,8 +40,8 @@ mod new_ipv4_prefix_set {
 
         fn setup() -> PrefixSet<Ipv4Prefix> {
             let mut s = super::setup();
-            let p = "192.0.2.0/24".parse().unwrap();
-            s.add_prefix(p).to_owned()
+            let p: Ipv4Prefix = "192.0.2.0/24".parse().unwrap();
+            s.insert(p).to_owned()
         }
 
         #[test]
@@ -81,8 +81,8 @@ mod new_ipv4_prefix_set {
 
             fn setup() -> PrefixSet<Ipv4Prefix> {
                 let mut s = super::setup();
-                let p = "192.0.2.0/24".parse().unwrap();
-                s.remove_prefix(p).to_owned()
+                let p: Ipv4Prefix = "192.0.2.0/24".parse().unwrap();
+                s.remove(p).to_owned()
             }
 
             #[test]
@@ -97,8 +97,8 @@ mod new_ipv4_prefix_set {
 
             fn setup() -> PrefixSet<Ipv4Prefix> {
                 let mut s = super::setup();
-                let p = "192.0.0.0/22".parse().unwrap();
-                s.add_prefix(p).to_owned()
+                let p: Ipv4Prefix = "192.0.0.0/22".parse().unwrap();
+                s.insert(p).to_owned()
             }
 
             #[test]
@@ -135,9 +135,8 @@ mod new_ipv4_prefix_set {
 
                 fn setup() -> PrefixSet<Ipv4Prefix> {
                     let mut s = super::setup();
-                    let p = "192.0.0.0/16".parse().unwrap();
-                    let r = IpPrefixRange::new(p, 24, 24).unwrap();
-                    s.remove_prefix_range(r).to_owned()
+                    let r: IpPrefixRange<_> = "192.0.0.0/16,24,24".parse().unwrap();
+                    s.remove(r).to_owned()
                 }
 
                 #[test]
@@ -161,8 +160,8 @@ mod new_ipv4_prefix_set {
 
                 fn setup() -> PrefixSet<Ipv4Prefix> {
                     let mut s = super::setup();
-                    let p = "192.0.3.0/24".parse().unwrap();
-                    s.add_prefix(p).to_owned()
+                    let p: Ipv4Prefix = "192.0.3.0/24".parse().unwrap();
+                    s.insert(p).to_owned()
                 }
 
                 #[test]
@@ -209,9 +208,8 @@ mod new_ipv4_prefix_set {
 
                     fn setup() -> PrefixSet<Ipv4Prefix> {
                         let mut s = super::setup();
-                        let p = "192.0.2.0/23".parse().unwrap();
-                        let r = IpPrefixRange::new(p, 24, 24).unwrap();
-                        s.remove_prefix_range(r).to_owned()
+                        let r: IpPrefixRange<_> = "192.0.2.0/23,24,24".parse().unwrap();
+                        s.remove(r).to_owned()
                     }
 
                     #[test]

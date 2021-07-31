@@ -24,18 +24,10 @@ impl<P: IpPrefix> PrefixSet<P> {
         PrefixSet { root }
     }
 
-    fn aggregate(&mut self) -> &mut Self {
-        if let Some(root) = mem::take(&mut self.root) {
-            self.root = root.deduplicate(None).aggregate().compress();
-        }
-        self
-    }
-
-    fn add_node(&mut self, new: Box<Node<P>>) -> &mut Self {
+    fn insert_node(&mut self, new: Box<Node<P>>) -> &mut Self {
         match mem::take(&mut self.root) {
             Some(root) => {
-                let new_root = root.add(new);
-                self.root = Some(new_root);
+                self.root = Some(root.add(new));
             }
             None => {
                 self.root = Some(new);
@@ -44,39 +36,20 @@ impl<P: IpPrefix> PrefixSet<P> {
         self
     }
 
-    fn add_singleton(&mut self, prefix: P) -> &mut Self {
-        let new = Box::new(Node::new_singleton(prefix));
-        self.add_node(new)
-    }
-
-    fn add_range(&mut self, prefix_range: IpPrefixRange<P>) -> &mut Self {
-        let new = Box::new(Node::new_range(prefix_range));
-        self.add_node(new)
-    }
-
-    pub fn add_prefix(&mut self, prefix: P) -> &mut Self {
-        self.add_singleton(prefix).aggregate()
-    }
-
-    pub fn add_prefixes_from<I>(&mut self, iter: I) -> &mut Self
+    pub fn insert<T>(&mut self, item: T) -> &mut Self
     where
-        I: IntoIterator<Item = P>,
+        T: Into<Box<Node<P>>>,
+    {
+        self.insert_node(item.into()).aggregate()
+    }
+
+    pub fn insert_from<I, T>(&mut self, iter: I) -> &mut Self
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<Box<Node<P>>>,
     {
         iter.into_iter()
-            .fold(self, |set, p| set.add_singleton(p))
-            .aggregate()
-    }
-
-    pub fn add_prefix_range(&mut self, prefix_range: IpPrefixRange<P>) -> &mut Self {
-        self.add_range(prefix_range).aggregate()
-    }
-
-    pub fn add_prefix_ranges_from<I>(&mut self, iter: I) -> &mut Self
-    where
-        I: IntoIterator<Item = IpPrefixRange<P>>,
-    {
-        iter.into_iter()
-            .fold(self, |set, r| set.add_range(r))
+            .fold(self, |set, item| set.insert_node(item.into()))
             .aggregate()
     }
 
@@ -87,46 +60,33 @@ impl<P: IpPrefix> PrefixSet<P> {
         self
     }
 
-    fn remove_singleton(&mut self, prefix: P) -> &mut Self {
-        let old = Box::new(Node::new_singleton(prefix));
-        self.remove_node(old)
-    }
-
-    fn remove_range(&mut self, prefix_range: IpPrefixRange<P>) -> &mut Self {
-        let old = Box::new(Node::new_range(prefix_range));
-        self.remove_node(old)
-    }
-
-    pub fn remove_prefix(&mut self, prefix: P) -> &mut Self {
-        self.remove_singleton(prefix).aggregate()
-    }
-
-    pub fn remove_prefixes_from<I>(&mut self, iter: I) -> &mut Self
+    pub fn remove<T>(&mut self, item: T) -> &mut Self
     where
-        I: IntoIterator<Item = P>,
+        T: Into<Box<Node<P>>>,
+    {
+        self.remove_node(item.into()).aggregate()
+    }
+
+    pub fn remove_from<I, T>(&mut self, iter: I) -> &mut Self
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<Box<Node<P>>>,
     {
         iter.into_iter()
-            .fold(self, |set, p| set.remove_singleton(p))
+            .fold(self, |set, item| set.remove_node(item.into()))
             .aggregate()
     }
 
-    pub fn remove_prefix_range(&mut self, prefix_range: IpPrefixRange<P>) -> &mut Self {
-        self.remove_range(prefix_range).aggregate()
-    }
-
-    pub fn remove_prefix_ranges_from<I>(&mut self, iter: I) -> &mut Self
-    where
-        I: IntoIterator<Item = IpPrefixRange<P>>,
-    {
-        iter.into_iter()
-            .fold(self, |set, r| set.remove_range(r))
-            .aggregate()
+    fn aggregate(&mut self) -> &mut Self {
+        if let Some(root) = mem::take(&mut self.root) {
+            self.root = root.deduplicate(None).aggregate().compress();
+        }
+        self
     }
 
     pub fn contains(&self, prefix: P) -> bool {
-        let qnode = Node::new_singleton(prefix);
         match &self.root {
-            Some(root) => root.search(&qnode).is_some(),
+            Some(root) => root.search(&prefix.into()).is_some(),
             None => false,
         }
     }

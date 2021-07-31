@@ -7,9 +7,7 @@ use super::{GlueMap, Node};
 
 #[allow(clippy::boxed_local)]
 fn subtree_size<P: IpPrefix>(root: Box<Node<P>>) -> usize {
-    let mut i: usize = 0;
-    root.walk(&mut |_| i += 1);
-    i
+    root.iter_subtree().count()
 }
 
 fn is_glue<P: IpPrefix>(node: &Node<P>) -> bool {
@@ -20,9 +18,9 @@ mod subtree_of_three_prefixes {
     use super::*;
 
     fn setup() -> Box<Node<Ipv4Prefix>> {
-        let n1 = Box::new(Node::new_singleton("10.1.0.0/16".parse().unwrap()));
-        let n2 = Box::new(Node::new_singleton("10.2.0.0/16".parse().unwrap()));
-        let n3 = Box::new(Node::new_singleton("10.3.0.0/16".parse().unwrap()));
+        let n1: Box<Node<_>> = "10.1.0.0/16".parse().unwrap();
+        let n2 = "10.2.0.0/16".parse().unwrap();
+        let n3 = "10.3.0.0/16".parse().unwrap();
         n1.add(n2).add(n3)
     }
 
@@ -89,8 +87,7 @@ mod new_ipv4_singleton {
     use super::*;
 
     fn setup() -> Box<Node<Ipv4Prefix>> {
-        let p = "192.0.2.0/24".parse().unwrap();
-        Box::new(Node::new_singleton(p))
+        "192.0.2.0/24".parse().unwrap()
     }
 
     #[test]
@@ -111,9 +108,7 @@ mod new_ipv4_singleton {
     #[test]
     fn becomes_glue_after_removal() -> TestResult {
         let n = setup();
-        assert!(is_glue(&n.remove(&mut Node::new_singleton(
-            "192.0.2.0/24".parse().unwrap()
-        ))));
+        assert!(is_glue(&n.remove(&mut "192.0.2.0/24".parse().unwrap())));
         Ok(())
     }
 
@@ -147,8 +142,7 @@ mod new_ipv4_singleton {
 
         fn setup() -> Box<Node<Ipv4Prefix>> {
             let n = super::setup();
-            let q = "192.0.2.192/32".parse().unwrap();
-            let m = Box::new(Node::new_singleton(q));
+            let m = "192.0.2.192/32".parse().unwrap();
             n.add(m)
         }
 
@@ -182,9 +176,7 @@ mod new_ipv4_singleton {
         #[test]
         fn becomes_glue_after_removal() -> TestResult {
             let n = setup();
-            assert!(is_glue(&n.remove(&mut Node::new_singleton(
-                "192.0.2.0/24".parse().unwrap()
-            ))));
+            assert!(is_glue(&n.remove(&mut "192.0.2.0/24".parse().unwrap())));
             Ok(())
         }
     }
@@ -194,8 +186,7 @@ mod new_ipv4_singleton {
 
         fn setup() -> Box<Node<Ipv4Prefix>> {
             let n = super::setup();
-            let q = "192.0.2.192/26".parse().unwrap();
-            let m = Box::new(Node::new_singleton(q));
+            let m = "192.0.2.192/26".parse().unwrap();
             n.add(m)
         }
 
@@ -232,8 +223,7 @@ mod new_ipv4_singleton {
 
         fn setup() -> Box<Node<Ipv4Prefix>> {
             let n = super::setup();
-            let q = "192.0.0.0/16".parse().unwrap();
-            let m = Box::new(Node::new_singleton(q));
+            let m = "192.0.0.0/16".parse().unwrap();
             n.add(m)
         }
 
@@ -267,9 +257,7 @@ mod new_ipv4_singleton {
         #[test]
         fn is_unchanged_after_subprefix_removal() -> TestResult {
             let n = setup();
-            let m = n
-                .clone()
-                .remove(&mut Node::new_singleton("192.0.2.0/24".parse().unwrap()));
+            let m = n.clone().remove(&mut "192.0.2.0/24".parse().unwrap());
             println!("{:#?}", m);
             assert_eq!(m, n);
             Ok(())
@@ -281,8 +269,7 @@ mod new_ipv4_singleton {
 
         fn setup() -> Box<Node<Ipv4Prefix>> {
             let n = super::setup();
-            let q = "192.0.3.0/24".parse().unwrap();
-            let m = Box::new(Node::new_singleton(q));
+            let m = "192.0.3.0/24".parse().unwrap();
             n.add(m)
         }
 
@@ -344,9 +331,10 @@ mod new_ipv4_singleton {
             #[test]
             fn is_glue_after_subprefix_removal() -> TestResult {
                 let mut n = setup();
-                let mut r = Node::new_range(
-                    IpPrefixRange::new("192.0.2.0/23".parse().unwrap(), 24, 24).unwrap(),
-                );
+                let mut r = "192.0.2.0/23,24,24"
+                    .parse::<IpPrefixRange<_>>()
+                    .unwrap()
+                    .into();
                 n = n.remove(&mut r);
                 println!("{:#?}", n);
                 assert!(is_glue(&n));
@@ -360,8 +348,7 @@ mod new_ipv4_singleton {
 
         fn setup() -> Box<Node<Ipv4Prefix>> {
             let n = super::setup();
-            let q = "192.168.0.0/16".parse().unwrap();
-            let m = Box::new(Node::new_singleton(q));
+            let m = "192.168.0.0/16".parse().unwrap();
             n.add(m)
         }
 
@@ -427,8 +414,7 @@ mod new_ipv6_singleton {
     use super::*;
 
     fn setup() -> Box<Node<Ipv6Prefix>> {
-        let p = "2001:db8:f00::/48".parse().unwrap();
-        Box::new(Node::new_singleton(p))
+        "2001:db8:f00::/48".parse().unwrap()
     }
 
     #[test]
@@ -483,8 +469,7 @@ mod new_ipv6_singleton {
 
         fn setup() -> Box<Node<Ipv6Prefix>> {
             let n = super::setup();
-            let q = "2001:db8:f00:baa::/128".parse().unwrap();
-            let m = Box::new(Node::new_singleton(q));
+            let m = "2001:db8:f00:baa::/128".parse().unwrap();
             n.add(m)
         }
 
@@ -528,8 +513,7 @@ mod new_ipv6_singleton {
 
         fn setup() -> Box<Node<Ipv6Prefix>> {
             let n = super::setup();
-            let q = "2001:db8:f00:baa::/64".parse().unwrap();
-            let m = Box::new(Node::new_singleton(q));
+            let m = "2001:db8:f00:baa::/64".parse().unwrap();
             n.add(m)
         }
 
@@ -573,8 +557,7 @@ mod new_ipv6_singleton {
 
         fn setup() -> Box<Node<Ipv6Prefix>> {
             let n = super::setup();
-            let q = "2001:db8::/36".parse().unwrap();
-            let m = Box::new(Node::new_singleton(q));
+            let m = "2001:db8::/36".parse().unwrap();
             n.add(m)
         }
 
@@ -618,8 +601,7 @@ mod new_ipv6_singleton {
 
         fn setup() -> Box<Node<Ipv6Prefix>> {
             let n = super::setup();
-            let q = "2001:db8:baa::/48".parse().unwrap();
-            let m = Box::new(Node::new_singleton(q));
+            let m = "2001:db8:baa::/48".parse().unwrap();
             n.add(m)
         }
 

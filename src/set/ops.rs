@@ -20,7 +20,7 @@ impl<P: IpPrefix> Zero for PrefixSet<P> {
 impl<P: IpPrefix> One for PrefixSet<P> {
     fn one() -> Self {
         Self::new()
-            .add_range(
+            .insert(
                 IpPrefixRange::new(P::new(P::BitMap::zero(), 0).unwrap(), 0, P::MAX_LENGTH)
                     .unwrap(),
             )
@@ -113,12 +113,35 @@ impl<P: IpPrefix> PartialEq for PrefixSet<P> {
 
 #[cfg(test)]
 mod tests {
+    use std::iter::FromIterator;
+
     use paste::paste;
 
     use crate::prefix::{Ipv4Prefix, Ipv6Prefix};
     use crate::tests::TestResult;
 
     use super::*;
+
+    impl<P: IpPrefix> FromIterator<&'static str> for PrefixSet<P> {
+        fn from_iter<I>(iter: I) -> Self
+        where
+            I: IntoIterator<Item = &'static str>,
+        {
+            let (ranges, remaining): (Vec<_>, Vec<_>) = iter
+                .into_iter()
+                .map(|s| s.parse::<IpPrefixRange<P>>().map_err(|_| s))
+                .partition(|res| res.is_ok());
+            let (prefixes, errors): (Vec<_>, Vec<_>) = remaining
+                .into_iter()
+                .map(|s| s.unwrap_err().parse::<P>())
+                .partition(|res| res.is_ok());
+            assert!(errors.is_empty());
+            Self::new()
+                .insert_from(ranges.into_iter().map(|r| r.unwrap()))
+                .insert_from(prefixes.into_iter().map(|p| p.unwrap()))
+                .to_owned()
+        }
+    }
 
     macro_rules! test_exprs {
         ( $($fn_id:ident {$lhs:expr, $rhs:expr});* ) => {

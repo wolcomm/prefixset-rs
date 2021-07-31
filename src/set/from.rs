@@ -1,6 +1,6 @@
 use std::iter::FromIterator;
 
-use crate::prefix::{IpPrefix, IpPrefixRange};
+use crate::{node::Node, prefix::IpPrefix};
 
 use super::PrefixSet;
 
@@ -14,59 +14,15 @@ where
     }
 }
 
-impl<P: IpPrefix> FromIterator<P> for PrefixSet<P> {
+impl<T, P> FromIterator<T> for PrefixSet<P>
+where
+    P: IpPrefix,
+    T: Into<Box<Node<P>>>,
+{
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = P>,
+        I: IntoIterator<Item = T>,
     {
-        PrefixSet::new().add_prefixes_from(iter).to_owned()
-    }
-}
-
-impl<'a, P: IpPrefix> FromIterator<&'a P> for PrefixSet<P> {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = &'a P>,
-    {
-        iter.into_iter().map(|p| p.to_owned()).collect()
-    }
-}
-
-impl<P: IpPrefix> FromIterator<IpPrefixRange<P>> for PrefixSet<P> {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = IpPrefixRange<P>>,
-    {
-        PrefixSet::new().add_prefix_ranges_from(iter).to_owned()
-    }
-}
-
-impl<'a, P: IpPrefix> FromIterator<&'a IpPrefixRange<P>> for PrefixSet<P> {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = &'a IpPrefixRange<P>>,
-    {
-        iter.into_iter().map(|r| r.to_owned()).collect()
-    }
-}
-
-impl<P: IpPrefix> FromIterator<&'static str> for PrefixSet<P> {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = &'static str>,
-    {
-        let (ranges, remaining): (Vec<_>, Vec<_>) = iter
-            .into_iter()
-            .map(|s| s.parse::<IpPrefixRange<P>>().map_err(|_| s))
-            .partition(|res| res.is_ok());
-        let (prefixes, errors): (Vec<_>, Vec<_>) = remaining
-            .into_iter()
-            .map(|s| s.unwrap_err().parse::<P>())
-            .partition(|res| res.is_ok());
-        assert!(errors.is_empty());
-        Self::new()
-            .add_prefix_ranges_from(ranges.into_iter().map(|r| r.unwrap()))
-            .add_prefixes_from(prefixes.into_iter().map(|p| p.unwrap()))
-            .to_owned()
+        PrefixSet::new().insert_from(iter).to_owned()
     }
 }

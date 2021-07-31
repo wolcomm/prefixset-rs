@@ -1,6 +1,7 @@
 use std::cmp::min;
 use std::convert::TryInto;
 use std::ops::{BitAnd, BitOr, Sub};
+use std::str::FromStr;
 
 use num::{One, PrimInt, Zero};
 
@@ -40,22 +41,6 @@ impl<P: IpPrefix> Node<P> {
         }
     }
 
-    pub fn new_singleton(prefix: P) -> Self {
-        Self::new(prefix, GlueMap::singleton(prefix.length()))
-    }
-
-    pub fn new_range(prefix_range: IpPrefixRange<P>) -> Self {
-        Self::new(prefix_range.base().to_owned(), prefix_range.into())
-    }
-
-    fn new_glue(prefix: P) -> Self {
-        Self::new(prefix, GlueMap::zero())
-    }
-
-    pub fn detatched_clone(&self) -> Self {
-        Self::new(self.prefix, self.gluemap)
-    }
-
     pub fn prefix(&self) -> &P {
         &self.prefix
     }
@@ -63,7 +48,7 @@ impl<P: IpPrefix> Node<P> {
     pub fn add(mut self: Box<Self>, mut other: Box<Self>) -> Box<Self> {
         match self.compare_with(&other) {
             Comparison::Equal => {
-                self.add_glue_from(&other);
+                self.gluemap |= other.gluemap;
                 if let Some(child) = other.left {
                     self = self.add(child);
                 }
@@ -120,7 +105,7 @@ impl<P: IpPrefix> Node<P> {
             Comparison::Divergent(common) => {
                 // unwrap is safe here because common < P::MAX_LENGTH
                 let glue_prefix = self.prefix.new_from(common).unwrap();
-                let mut glue = Box::new(Self::new_glue(glue_prefix));
+                let mut glue = Box::new(Self::new(glue_prefix, GlueMap::zero()));
                 match self.branch_direction(common) {
                     Direction::Left => {
                         glue.left = Some(self);
@@ -143,25 +128,10 @@ impl<P: IpPrefix> Node<P> {
         if let Some(mut child) = other.right.take() {
             self = self.remove(&mut child);
         }
-        // let p: P = "27.0.0.0/24".parse().unwrap();
-        // let q: P = "27.0.0.0/23".parse().unwrap();
-        // let r: P = "27.0.0.0/22".parse().unwrap();
-        // let s: P = "27.0.0.0/21".parse().unwrap();
-        // dbg!(&self, &other);
-        // let trace = true;
-        // let trace = if
-        //     (self.prefix() == &p || self.prefix() == &q || self.prefix() == &r || self.prefix() ==)
-        //         && other.prefix() == &p {
-        //             true
-        // } else {
-        //     false
-        // };
         match self.compare_with(other) {
             Comparison::ParentOf(_) | Comparison::Equal => {
                 // clear gluemap bits and recurse down
-                // if trace { dbg!(&self.gluemap, &other.gluemap); }
                 self.gluemap &= !other.gluemap;
-                // if trace { dbg!(&self.gluemap); }
                 if let Some(child) = self.left.take() {
                     self.left = Some(child.remove(other));
                 };
@@ -170,29 +140,19 @@ impl<P: IpPrefix> Node<P> {
                 };
             }
             Comparison::ChildOf(common) => {
-                // if trace { dbg!(&self.gluemap, &other.gluemap); }
                 let deaggr_mask = self.gluemap & other.gluemap;
                 if deaggr_mask != GlueMap::zero() {
                     // deaggregate matching subprefixes before recursing
                     self.gluemap &= !deaggr_mask;
-                    // if trace {
-                    //     dbg!(&self.gluemap);
-                    //     println!("deaggregating...")
-                    // }
                     self = self
                         .prefix
                         .into_iter_subprefixes(other.prefix.length())
                         .map(|p| Box::new(Self::new(p, deaggr_mask)))
                         .fold(self, |this, n| this.add(n));
-                    // if trace { dbg!(&self); }
                 }
                 match other.branch_direction(common) {
                     Direction::Left => {
                         if let Some(child) = self.left.take() {
-                            // if child.prefix() == &r {
-                            //     println!("decending into {:?}", child);
-                            //     dbg!(&self);
-                            // }
                             self.left = Some(child.remove(other));
                         };
                     }
@@ -205,7 +165,6 @@ impl<P: IpPrefix> Node<P> {
             }
             _ => (),
         };
-        // if trace { dbg!(&self); }
         self
     }
 
@@ -314,20 +273,6 @@ impl<P: IpPrefix> Node<P> {
         }
     }
 
-    pub fn walk(&self, f: &mut impl FnMut(&Self)) {
-        f(self);
-        if let Some(child) = &self.left {
-            child.walk(f);
-        }
-        if let Some(child) = &self.right {
-            child.walk(f);
-        }
-    }
-
-    fn add_glue_from(&mut self, other: &Self) {
-        self.gluemap |= other.gluemap
-    }
-
     fn branch_direction(&self, bit_index: u8) -> Direction {
         let next_index = bit_index + 1;
         let mask = P::BitMap::one() << (P::MAX_LENGTH - next_index);
@@ -362,6 +307,47 @@ impl<P: IpPrefix> Node<P> {
     #[allow(clippy::needless_lifetimes, clippy::borrowed_box)]
     pub fn iter_subtree<'a>(self: &'a Box<Self>) -> NodeTreeIter<'a, P> {
         self.into()
+    }
+}
+
+impl<P: IpPrefix> From<P> for Node<P> {
+    fn from(prefix: P) -> Self {
+        Self::new(prefix, GlueMap::singleton(prefix.length()))
+    }
+}
+
+impl<P: IpPrefix> From<IpPrefixRange<P>> for Node<P> {
+    fn from(prefix_range: IpPrefixRange<P>) -> Self {
+        Node::new(prefix_range.base().to_owned(), prefix_range.into())
+    }
+}
+
+impl<P: IpPrefix> From<P> for Box<Node<P>> {
+    fn from(prefix: P) -> Self {
+        Box::new(prefix.into())
+    }
+}
+
+impl<P: IpPrefix> From<IpPrefixRange<P>> for Box<Node<P>> {
+    fn from(prefix_range: IpPrefixRange<P>) -> Self {
+        Box::new(prefix_range.into())
+    }
+}
+
+impl<P: IpPrefix> FromStr for Node<P> {
+    type Err = <P as FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let prefix = s.parse::<P>()?;
+        Ok(prefix.into())
+    }
+}
+
+impl<P: IpPrefix> FromStr for Box<Node<P>> {
+    type Err = <P as FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse().map(Box::new)
     }
 }
 

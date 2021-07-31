@@ -12,8 +12,8 @@ mod ipv4 {
 
     #[test]
     fn set_from_prefixes_contains_all_prefixes() {
-        let prefixes = data_set("AS-WOLCOMM-ipv4-prefixes", 0, 0).read();
-        let set: PrefixSet<Ipv4Prefix> = prefixes.iter().collect();
+        let prefixes: Vec<Ipv4Prefix> = data_set("AS-WOLCOMM-ipv4-prefixes", 0, 0).read();
+        let set: PrefixSet<Ipv4Prefix> = prefixes.iter().cloned().collect();
         let mut i = 0;
         prefixes.into_iter().for_each(|prefix| {
             assert!(set.contains(prefix));
@@ -27,11 +27,11 @@ mod ipv4 {
     #[test]
     fn set_from_prefixes_is_same_as_source() {
         let prefixes: Vec<Ipv4Prefix> = data_set("AS-WOLCOMM-ipv4-prefixes", 0, 0).read();
-        let set: PrefixSet<_> = prefixes.iter().collect();
+        let set: PrefixSet<_> = prefixes.iter().cloned().collect();
         let prefixes_pre: HashSet<_> = prefixes.into_iter().collect();
         let prefixes_post: HashSet<_> = set.iter_prefixes().collect();
         let mut difference: Vec<_> = (&prefixes_pre ^ &prefixes_post).into_iter().collect();
-        difference.sort_by(|p, q| (p.bits(), p.length()).cmp(&(q.bits(), q.length())));
+        difference.sort_by_key(|p| (p.bits(), p.length()));
         println!("{:#?}", difference);
         assert!(difference.is_empty());
     }
@@ -164,13 +164,7 @@ mod ipv4 {
         let diff = s.clone() - t.clone();
         let err = t
             .iter_prefixes()
-            .filter_map(|p| {
-                if diff.contains(p.to_owned()) {
-                    Some(p)
-                } else {
-                    None
-                }
-            })
+            .filter(|p| diff.contains(p.to_owned()))
             .count();
         assert_eq!(err, 0)
     }
@@ -189,13 +183,7 @@ mod ipv4 {
         let diff = s.clone() - t.clone();
         let err = t
             .iter_prefixes()
-            .filter_map(|p| {
-                if diff.contains(p.to_owned()) {
-                    Some(p)
-                } else {
-                    None
-                }
-            })
+            .filter(|p| diff.contains(p.to_owned()))
             .count();
         assert_eq!(err, 0)
     }
@@ -216,8 +204,8 @@ mod ipv6 {
 
     #[test]
     fn set_from_prefixes_contains_all_prefixes() {
-        let prefixes = data_set("AS-WOLCOMM-ipv6-prefixes", 0, 0).read();
-        let set: PrefixSet<Ipv6Prefix> = prefixes.iter().collect();
+        let prefixes: Vec<Ipv6Prefix> = data_set("AS-WOLCOMM-ipv6-prefixes", 0, 0).read();
+        let set: PrefixSet<Ipv6Prefix> = prefixes.iter().cloned().collect();
         let mut i = 0;
         prefixes.into_iter().for_each(|prefix| {
             assert!(set.contains(prefix));
@@ -231,11 +219,11 @@ mod ipv6 {
     #[test]
     fn set_from_prefixes_is_same_as_source() {
         let prefixes: Vec<Ipv6Prefix> = data_set("AS-WOLCOMM-ipv6-prefixes", 0, 0).read();
-        let set: PrefixSet<_> = prefixes.iter().collect();
+        let set: PrefixSet<_> = prefixes.iter().cloned().collect();
         let prefixes_pre: HashSet<_> = prefixes.into_iter().collect();
         let prefixes_post: HashSet<_> = set.iter_prefixes().collect();
         let mut difference: Vec<_> = (&prefixes_pre ^ &prefixes_post).into_iter().collect();
-        difference.sort_by(|p, q| (p.bits(), p.length()).cmp(&(q.bits(), q.length())));
+        difference.sort_by_key(|p| (p.bits(), p.length()));
         println!("{:#?}", difference);
         assert!(difference.is_empty());
     }
@@ -368,13 +356,7 @@ mod ipv6 {
         let diff = s.clone() - t.clone();
         let err = t
             .iter_prefixes()
-            .filter_map(|p| {
-                if diff.contains(p.to_owned()) {
-                    Some(p)
-                } else {
-                    None
-                }
-            })
+            .filter(|p| diff.contains(p.to_owned()))
             .count();
         assert_eq!(err, 0)
     }
@@ -393,13 +375,7 @@ mod ipv6 {
         let diff = s.clone() - t.clone();
         let err = t
             .iter_prefixes()
-            .filter_map(|p| {
-                if diff.contains(p.to_owned()) {
-                    Some(p)
-                } else {
-                    None
-                }
-            })
+            .filter(|p| diff.contains(p.to_owned()))
             .count();
         assert_eq!(err, 0)
     }
