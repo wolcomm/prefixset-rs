@@ -98,6 +98,18 @@ impl<P: IpPrefix> PrefixSet<P> {
     pub fn iter_prefixes(&self) -> PrefixIter<P> {
         self.into()
     }
+
+    pub fn len(&self) -> usize {
+        self.iter_prefixes().count()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.iter_prefix_ranges().count() == 0
+    }
+
+    pub fn clear(&mut self) {
+        self.root = None
+    }
 }
 
 impl<P: IpPrefix> Default for PrefixSet<P> {
@@ -112,6 +124,19 @@ impl<'a, P: IpPrefix> IntoIterator for &'a PrefixSet<P> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter_prefix_ranges()
+    }
+}
+
+impl<P, A> Extend<A> for PrefixSet<P>
+where
+    P: IpPrefix,
+    A: Into<Box<Node<P>>>,
+{
+    fn extend<T>(&mut self, iter: T)
+    where
+        T: IntoIterator<Item = A>,
+    {
+        self.insert_from(iter);
     }
 }
 
