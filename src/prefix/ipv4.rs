@@ -42,17 +42,17 @@ impl fmt::Display for Ipv4Prefix {
 }
 
 impl IpPrefix for Ipv4Prefix {
-    type BitMap = u32;
+    type Bits = u32;
     const MAX_LENGTH: u8 = 32;
 
-    fn new(addr: Self::BitMap, length: u8) -> Result<Self, Box<dyn Error>> {
+    fn new(addr: Self::Bits, length: u8) -> Result<Self, Box<dyn Error>> {
         if length > Self::MAX_LENGTH {
             return Err(Box::new(PrefixLenError));
         }
         Ok(Self { bits: addr, length })
     }
 
-    fn bits(&self) -> Self::BitMap {
+    fn bits(&self) -> Self::Bits {
         self.bits
     }
 

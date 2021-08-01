@@ -21,8 +21,7 @@ impl<P: IpPrefix> One for PrefixSet<P> {
     fn one() -> Self {
         Self::new()
             .insert(
-                IpPrefixRange::new(P::new(P::BitMap::zero(), 0).unwrap(), 0, P::MAX_LENGTH)
-                    .unwrap(),
+                IpPrefixRange::new(P::new(P::Bits::zero(), 0).unwrap(), 0, P::MAX_LENGTH).unwrap(),
             )
             .to_owned()
     }

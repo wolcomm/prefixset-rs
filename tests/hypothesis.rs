@@ -25,14 +25,14 @@ impl<P: IpPrefix> Deref for TestPrefix<P> {
 impl<P> Arbitrary for TestPrefix<P>
 where
     P: IpPrefix,
-    P::BitMap: Arbitrary,
-    StrategyFor<P::BitMap>: 'static,
+    P::Bits: Arbitrary,
+    StrategyFor<P::Bits>: 'static,
 {
-    type Parameters = ParamsFor<P::BitMap>;
+    type Parameters = ParamsFor<P::Bits>;
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
-        any_with::<P::BitMap>(args)
+        any_with::<P::Bits>(args)
             .prop_flat_map(|bits| {
                 let min_length = P::MAX_LENGTH - bits.trailing_zeros() as u8;
                 (Just(bits), min_length..=P::MAX_LENGTH)

@@ -42,17 +42,17 @@ impl fmt::Display for Ipv6Prefix {
 }
 
 impl IpPrefix for Ipv6Prefix {
-    type BitMap = u128;
+    type Bits = u128;
     const MAX_LENGTH: u8 = 128;
 
-    fn new(addr: Self::BitMap, length: u8) -> Result<Self, Box<dyn Error>> {
+    fn new(addr: Self::Bits, length: u8) -> Result<Self, Box<dyn Error>> {
         if length > Self::MAX_LENGTH {
             return Err(Box::new(PrefixLenError));
         }
         Ok(Self { bits: addr, length })
     }
 
-    fn bits(&self) -> Self::BitMap {
+    fn bits(&self) -> Self::Bits {
         self.bits
     }
 

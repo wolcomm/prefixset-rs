@@ -13,27 +13,27 @@ use crate::prefix::{IpPrefix, IpPrefixRange};
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct GlueMap<P: IpPrefix> {
-    bitmap: P::BitMap,
+    bitmap: P::Bits,
     hostbit: bool,
 }
 
 impl<P: IpPrefix> Zero for GlueMap<P> {
     fn zero() -> Self {
         Self {
-            bitmap: P::BitMap::zero(),
+            bitmap: P::Bits::zero(),
             hostbit: false,
         }
     }
 
     fn is_zero(&self) -> bool {
-        self.bitmap == P::BitMap::zero() && !self.hostbit
+        self.bitmap == P::Bits::zero() && !self.hostbit
     }
 }
 
 impl<P: IpPrefix> One for GlueMap<P> {
     fn one() -> Self {
         Self {
-            bitmap: !P::BitMap::zero(),
+            bitmap: !P::Bits::zero(),
             hostbit: true,
         }
     }
@@ -112,7 +112,7 @@ impl<P: IpPrefix> Shl<u8> for GlueMap<P> {
                 hostbit: self.hostbit.to_owned(),
             },
             None => Self {
-                bitmap: P::BitMap::zero(),
+                bitmap: P::Bits::zero(),
                 hostbit: true,
             },
         }
@@ -133,17 +133,17 @@ impl<P: IpPrefix> Shr<u8> for GlueMap<P> {
             (
                 false,
                 if rhs > P::MAX_LENGTH {
-                    P::BitMap::zero()
+                    P::Bits::zero()
                 } else {
-                    P::BitMap::one() << (P::MAX_LENGTH - rhs)
+                    P::Bits::one() << (P::MAX_LENGTH - rhs)
                 },
             )
         } else {
-            (self.hostbit, P::BitMap::zero())
+            (self.hostbit, P::Bits::zero())
         };
         let shifted_bitmap = match self.bitmap.checked_shr(rhs.into()) {
             Some(result) => result,
-            None => P::BitMap::zero(),
+            None => P::Bits::zero(),
         };
         Self {
             bitmap: shifted_bitmap + shifted_hostbit,
@@ -170,7 +170,7 @@ impl<P: IpPrefix> Sum for GlueMap<P> {
 impl<P: IpPrefix> GlueMap<P> {
     pub fn singleton(length: u8) -> Self {
         Self {
-            bitmap: P::BitMap::one(),
+            bitmap: P::Bits::one(),
             hostbit: false,
         } << length
     }

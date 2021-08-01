@@ -290,8 +290,8 @@ impl<P: IpPrefix> Node<P> {
 
     fn branch_direction(&self, bit_index: u8) -> Direction {
         let next_index = bit_index + 1;
-        let mask = P::BitMap::one() << (P::MAX_LENGTH - next_index);
-        if self.prefix.bits() & mask == P::BitMap::zero() {
+        let mask = P::Bits::one() << (P::MAX_LENGTH - next_index);
+        if self.prefix.bits() & mask == P::Bits::zero() {
             Direction::Left
         } else {
             Direction::Right

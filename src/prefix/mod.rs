@@ -22,7 +22,7 @@ where
         + PartialEq
         + Eq
         + Hash,
-    Self::BitMap: PrimInt
+    Self::Bits: PrimInt
         + Default
         + CheckedShl
         + CheckedShr
@@ -31,22 +31,22 @@ where
         + BitAndAssign
         + BitOrAssign
         + std::fmt::Debug
-        + Shl<u8, Output = Self::BitMap>
+        + Shl<u8, Output = Self::Bits>
         + ShlAssign
-        + Shr<u8, Output = Self::BitMap>
+        + Shr<u8, Output = Self::Bits>
         + ShrAssign<u8>
         + Sum,
 {
-    type BitMap;
+    type Bits;
 
     const MAX_LENGTH: u8;
 
-    fn new(addr: Self::BitMap, length: u8) -> Result<Self, Box<dyn Error>>;
-    fn bits(&self) -> Self::BitMap;
+    fn new(addr: Self::Bits, length: u8) -> Result<Self, Box<dyn Error>>;
+    fn bits(&self) -> Self::Bits;
     fn length(&self) -> u8;
 
     fn new_from(&self, length: u8) -> Result<Self, Box<dyn Error>> {
-        let mask = (!Self::BitMap::zero())
+        let mask = (!Self::Bits::zero())
             .checked_shl((Self::MAX_LENGTH - length).into())
             .unwrap_or_default();
         Self::new(self.bits() & mask, length)
@@ -69,9 +69,9 @@ where
 {
     base: Q,
     length: u8,
-    max_index: P::BitMap,
-    step: P::BitMap,
-    next_index: P::BitMap,
+    max_index: P::Bits,
+    step: P::Bits,
+    next_index: P::Bits,
 }
 
 impl<P, Q> SubPrefixesIntoIter<P, Q>
@@ -80,10 +80,10 @@ where
     Q: Borrow<P>,
 {
     fn new(base: Q, length: u8) -> Self {
-        let max_index = (!P::BitMap::zero())
+        let max_index = (!P::Bits::zero())
             .checked_shr((P::MAX_LENGTH - length + base.borrow().length()).into())
             .unwrap_or_default();
-        let step = P::BitMap::one()
+        let step = P::Bits::one()
             .checked_shl((P::MAX_LENGTH - length).into())
             .unwrap_or_default();
         Self {
@@ -91,7 +91,7 @@ where
             length,
             max_index,
             step,
-            next_index: P::BitMap::zero(),
+            next_index: P::Bits::zero(),
         }
     }
 }
@@ -109,7 +109,7 @@ where
         }
         if self.next_index <= self.max_index {
             let addr = self.base.borrow().bits() + (self.next_index * self.step);
-            self.next_index += P::BitMap::one();
+            self.next_index += P::Bits::one();
             // safe to unwrap here, since we checked length above
             Some(P::new(addr, self.length).unwrap())
         } else {
