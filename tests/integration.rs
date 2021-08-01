@@ -13,9 +13,9 @@ mod ipv4 {
     #[test]
     fn set_from_prefixes_contains_all_prefixes() {
         let prefixes: Vec<Ipv4Prefix> = data_set("AS-WOLCOMM-ipv4-prefixes", 0, 0).read();
-        let set: PrefixSet<Ipv4Prefix> = prefixes.iter().cloned().collect();
+        let set: PrefixSet<_> = prefixes.iter().collect();
         let mut i = 0;
-        prefixes.into_iter().for_each(|prefix| {
+        prefixes.iter().for_each(|prefix| {
             assert!(set.contains(prefix));
             i += 1;
         });
@@ -27,7 +27,7 @@ mod ipv4 {
     #[test]
     fn set_from_prefixes_is_same_as_source() {
         let prefixes: Vec<Ipv4Prefix> = data_set("AS-WOLCOMM-ipv4-prefixes", 0, 0).read();
-        let set: PrefixSet<_> = prefixes.iter().cloned().collect();
+        let set: PrefixSet<_> = prefixes.iter().collect();
         let prefixes_pre: HashSet<_> = prefixes.into_iter().collect();
         let prefixes_post: HashSet<_> = set.iter_prefixes().collect();
         let mut difference: Vec<_> = (&prefixes_pre ^ &prefixes_post).into_iter().collect();
@@ -41,8 +41,8 @@ mod ipv4 {
         let prefixes: Vec<Ipv4Prefix> = data_set("AS-WOLCOMM-ipv4-prefixes", 0, 0).read();
         let ranges: Vec<IpPrefixRange<Ipv4Prefix>> =
             data_set("AS-WOLCOMM-ipv4-ranges", 0, 0).read();
-        let s: PrefixSet<_> = prefixes.into();
-        let t: PrefixSet<_> = ranges.into();
+        let s: PrefixSet<_> = prefixes.iter().collect();
+        let t: PrefixSet<_> = ranges.iter().collect();
         assert_eq!(s, t);
     }
 
@@ -51,8 +51,8 @@ mod ipv4 {
         let prefixes: Vec<Ipv4Prefix> = data_set("AS-WOLCOMM-ipv4-prefixes", 0, 0).read();
         let ranges: Vec<IpPrefixRange<Ipv4Prefix>> =
             data_set("AS-WOLCOMM-ipv4-ranges", 0, 0).read();
-        let s: PrefixSet<_> = prefixes.into();
-        let t: PrefixSet<_> = ranges.into();
+        let s: PrefixSet<_> = prefixes.iter().collect();
+        let t: PrefixSet<_> = ranges.iter().collect();
         assert_eq!(s.clone() & t.clone(), s | t);
     }
 
@@ -61,8 +61,8 @@ mod ipv4 {
         let prefixes: Vec<Ipv4Prefix> = data_set("AS-WOLCOMM-ipv4-prefixes", 0, 0).read();
         let ranges: Vec<IpPrefixRange<Ipv4Prefix>> =
             data_set("AS-WOLCOMM-ipv4-ranges", 0, 0).read();
-        let s: PrefixSet<_> = prefixes.into();
-        let t: PrefixSet<_> = ranges.into();
+        let s: PrefixSet<_> = prefixes.iter().collect();
+        let t: PrefixSet<_> = ranges.iter().collect();
         assert_eq!(s ^ t, PrefixSet::zero());
     }
 
@@ -70,11 +70,11 @@ mod ipv4 {
     fn intersection_of_sets_from_prefixes_has_expected_size() {
         let s: PrefixSet<_> = data_set::<Ipv4Prefix>("AS-WOLCOMM-ipv4-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> = data_set::<Ipv4Prefix>("AS-HURRICANE-ipv4-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let intersection = s & t;
         assert_eq!(intersection.iter_prefixes().count(), 407473)
@@ -82,14 +82,15 @@ mod ipv4 {
 
     #[test]
     fn intersection_of_sets_from_ranges_has_expected_size() {
-        let s: PrefixSet<_> = data_set::<Ipv4Prefix>("AS-WOLCOMM-ipv4-prefixes", 0, 0)
+        let s: PrefixSet<_> = data_set::<IpPrefixRange<Ipv4Prefix>>("AS-WOLCOMM-ipv4-ranges", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
-        let t: PrefixSet<_> = data_set::<Ipv4Prefix>("AS-HURRICANE-ipv4-prefixes", 0, 0)
-            .read()
-            .into_iter()
-            .collect();
+        let t: PrefixSet<_> =
+            data_set::<IpPrefixRange<Ipv4Prefix>>("AS-HURRICANE-ipv4-ranges", 0, 0)
+                .read()
+                .iter()
+                .collect();
         let intersection = s & t;
         assert_eq!(intersection.iter_prefixes().count(), 407473)
     }
@@ -98,11 +99,11 @@ mod ipv4 {
     fn union_of_sets_from_prefixes_has_expected_size() {
         let s: PrefixSet<_> = data_set::<Ipv4Prefix>("AS-WOLCOMM-ipv4-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> = data_set::<Ipv4Prefix>("AS-HURRICANE-ipv4-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let union = s | t;
         assert_eq!(union.iter_prefixes().count(), 1165336)
@@ -112,12 +113,12 @@ mod ipv4 {
     fn union_of_sets_from_ranges_has_expected_size() {
         let s: PrefixSet<_> = data_set::<IpPrefixRange<Ipv4Prefix>>("AS-WOLCOMM-ipv4-ranges", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> =
             data_set::<IpPrefixRange<Ipv4Prefix>>("AS-HURRICANE-ipv4-ranges", 0, 0)
                 .read()
-                .into_iter()
+                .iter()
                 .collect();
         let union = s | t;
         assert_eq!(union.iter_prefixes().count(), 1165336)
@@ -127,11 +128,11 @@ mod ipv4 {
     fn xor_of_sets_from_prefixes_has_expected_size() {
         let s: PrefixSet<_> = data_set::<Ipv4Prefix>("AS-WOLCOMM-ipv4-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> = data_set::<Ipv4Prefix>("AS-HURRICANE-ipv4-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let xor = s ^ t;
         assert_eq!(xor.iter_prefixes().count(), 757863)
@@ -140,12 +141,12 @@ mod ipv4 {
     fn xor_of_sets_from_ranges_has_expected_size() {
         let s: PrefixSet<_> = data_set::<IpPrefixRange<Ipv4Prefix>>("AS-WOLCOMM-ipv4-ranges", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> =
             data_set::<IpPrefixRange<Ipv4Prefix>>("AS-HURRICANE-ipv4-ranges", 0, 0)
                 .read()
-                .into_iter()
+                .iter()
                 .collect();
         let xor = s ^ t;
         assert_eq!(xor.iter_prefixes().count(), 757863)
@@ -155,17 +156,14 @@ mod ipv4 {
     fn diff_of_sets_from_prefixes_do_not_contain_removed_prefixes() {
         let s: PrefixSet<_> = data_set::<Ipv4Prefix>("AS-WOLCOMM-ipv4-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> = data_set::<Ipv4Prefix>("AS-HURRICANE-ipv4-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let diff = s.clone() - t.clone();
-        let err = t
-            .iter_prefixes()
-            .filter(|p| diff.contains(p.to_owned()))
-            .count();
+        let err = t.iter_prefixes().filter(|p| diff.contains(p)).count();
         assert_eq!(err, 0)
     }
 
@@ -173,18 +171,15 @@ mod ipv4 {
     fn diff_of_sets_from_ranges_do_not_contain_removed_prefixes() {
         let s: PrefixSet<_> = data_set::<IpPrefixRange<Ipv4Prefix>>("AS-WOLCOMM-ipv4-ranges", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> =
             data_set::<IpPrefixRange<Ipv4Prefix>>("AS-HURRICANE-ipv4-ranges", 0, 0)
                 .read()
-                .into_iter()
+                .iter()
                 .collect();
         let diff = s.clone() - t.clone();
-        let err = t
-            .iter_prefixes()
-            .filter(|p| diff.contains(p.to_owned()))
-            .count();
+        let err = t.iter_prefixes().filter(|p| diff.contains(p)).count();
         assert_eq!(err, 0)
     }
 
@@ -205,9 +200,9 @@ mod ipv6 {
     #[test]
     fn set_from_prefixes_contains_all_prefixes() {
         let prefixes: Vec<Ipv6Prefix> = data_set("AS-WOLCOMM-ipv6-prefixes", 0, 0).read();
-        let set: PrefixSet<Ipv6Prefix> = prefixes.iter().cloned().collect();
+        let set: PrefixSet<Ipv6Prefix> = prefixes.iter().collect();
         let mut i = 0;
-        prefixes.into_iter().for_each(|prefix| {
+        prefixes.iter().for_each(|prefix| {
             assert!(set.contains(prefix));
             i += 1;
         });
@@ -219,7 +214,7 @@ mod ipv6 {
     #[test]
     fn set_from_prefixes_is_same_as_source() {
         let prefixes: Vec<Ipv6Prefix> = data_set("AS-WOLCOMM-ipv6-prefixes", 0, 0).read();
-        let set: PrefixSet<_> = prefixes.iter().cloned().collect();
+        let set: PrefixSet<_> = prefixes.iter().collect();
         let prefixes_pre: HashSet<_> = prefixes.into_iter().collect();
         let prefixes_post: HashSet<_> = set.iter_prefixes().collect();
         let mut difference: Vec<_> = (&prefixes_pre ^ &prefixes_post).into_iter().collect();
@@ -233,8 +228,8 @@ mod ipv6 {
         let prefixes: Vec<Ipv6Prefix> = data_set("AS-WOLCOMM-ipv6-prefixes", 0, 0).read();
         let ranges: Vec<IpPrefixRange<Ipv6Prefix>> =
             data_set("AS-WOLCOMM-ipv6-ranges", 0, 0).read();
-        let s: PrefixSet<_> = prefixes.into();
-        let t: PrefixSet<_> = ranges.into();
+        let s: PrefixSet<_> = prefixes.iter().collect();
+        let t: PrefixSet<_> = ranges.iter().collect();
         assert_eq!(s, t);
     }
 
@@ -243,8 +238,8 @@ mod ipv6 {
         let prefixes: Vec<Ipv6Prefix> = data_set("AS-WOLCOMM-ipv6-prefixes", 0, 0).read();
         let ranges: Vec<IpPrefixRange<Ipv6Prefix>> =
             data_set("AS-WOLCOMM-ipv6-ranges", 0, 0).read();
-        let s: PrefixSet<_> = prefixes.into();
-        let t: PrefixSet<_> = ranges.into();
+        let s: PrefixSet<_> = prefixes.iter().collect();
+        let t: PrefixSet<_> = ranges.iter().collect();
         assert_eq!(s.clone() & t.clone(), s | t);
     }
 
@@ -253,8 +248,8 @@ mod ipv6 {
         let prefixes: Vec<Ipv6Prefix> = data_set("AS-WOLCOMM-ipv6-prefixes", 0, 0).read();
         let ranges: Vec<IpPrefixRange<Ipv6Prefix>> =
             data_set("AS-WOLCOMM-ipv6-ranges", 0, 0).read();
-        let s: PrefixSet<_> = prefixes.into();
-        let t: PrefixSet<_> = ranges.into();
+        let s: PrefixSet<_> = prefixes.iter().collect();
+        let t: PrefixSet<_> = ranges.iter().collect();
         assert_eq!(s ^ t, PrefixSet::zero());
     }
 
@@ -262,11 +257,11 @@ mod ipv6 {
     fn intersection_of_sets_from_prefixes_has_expected_size() {
         let s: PrefixSet<_> = data_set::<Ipv6Prefix>("AS-WOLCOMM-ipv6-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> = data_set::<Ipv6Prefix>("AS-HURRICANE-ipv6-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let intersection = s & t;
         assert_eq!(intersection.iter_prefixes().count(), 146252)
@@ -274,14 +269,15 @@ mod ipv6 {
 
     #[test]
     fn intersection_of_sets_from_ranges_has_expected_size() {
-        let s: PrefixSet<_> = data_set::<Ipv6Prefix>("AS-WOLCOMM-ipv6-prefixes", 0, 0)
+        let s: PrefixSet<_> = data_set::<IpPrefixRange<Ipv6Prefix>>("AS-WOLCOMM-ipv6-ranges", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
-        let t: PrefixSet<_> = data_set::<Ipv6Prefix>("AS-HURRICANE-ipv6-prefixes", 0, 0)
-            .read()
-            .into_iter()
-            .collect();
+        let t: PrefixSet<_> =
+            data_set::<IpPrefixRange<Ipv6Prefix>>("AS-HURRICANE-ipv6-ranges", 0, 0)
+                .read()
+                .iter()
+                .collect();
         let intersection = s & t;
         assert_eq!(intersection.iter_prefixes().count(), 146252)
     }
@@ -290,11 +286,11 @@ mod ipv6 {
     fn union_of_sets_from_prefixes_has_expected_size() {
         let s: PrefixSet<_> = data_set::<Ipv6Prefix>("AS-WOLCOMM-ipv6-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> = data_set::<Ipv6Prefix>("AS-HURRICANE-ipv6-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let union = s | t;
         assert_eq!(union.iter_prefixes().count(), 347267)
@@ -304,12 +300,12 @@ mod ipv6 {
     fn union_of_sets_from_ranges_has_expected_size() {
         let s: PrefixSet<_> = data_set::<IpPrefixRange<Ipv6Prefix>>("AS-WOLCOMM-ipv6-ranges", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> =
             data_set::<IpPrefixRange<Ipv6Prefix>>("AS-HURRICANE-ipv6-ranges", 0, 0)
                 .read()
-                .into_iter()
+                .iter()
                 .collect();
         let union = s | t;
         assert_eq!(union.iter_prefixes().count(), 347267)
@@ -319,11 +315,11 @@ mod ipv6 {
     fn xor_of_sets_from_prefixes_has_expected_size() {
         let s: PrefixSet<_> = data_set::<Ipv6Prefix>("AS-WOLCOMM-ipv6-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> = data_set::<Ipv6Prefix>("AS-HURRICANE-ipv6-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let xor = s ^ t;
         assert_eq!(xor.iter_prefixes().count(), 201015)
@@ -332,12 +328,12 @@ mod ipv6 {
     fn xor_of_sets_from_ranges_has_expected_size() {
         let s: PrefixSet<_> = data_set::<IpPrefixRange<Ipv6Prefix>>("AS-WOLCOMM-ipv6-ranges", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> =
             data_set::<IpPrefixRange<Ipv6Prefix>>("AS-HURRICANE-ipv6-ranges", 0, 0)
                 .read()
-                .into_iter()
+                .iter()
                 .collect();
         let xor = s ^ t;
         assert_eq!(xor.iter_prefixes().count(), 201015)
@@ -347,17 +343,14 @@ mod ipv6 {
     fn diff_of_sets_from_prefixes_do_not_contain_removed_prefixes() {
         let s: PrefixSet<_> = data_set::<Ipv6Prefix>("AS-WOLCOMM-ipv6-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> = data_set::<Ipv6Prefix>("AS-HURRICANE-ipv6-prefixes", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let diff = s.clone() - t.clone();
-        let err = t
-            .iter_prefixes()
-            .filter(|p| diff.contains(p.to_owned()))
-            .count();
+        let err = t.iter_prefixes().filter(|p| diff.contains(p)).count();
         assert_eq!(err, 0)
     }
 
@@ -365,18 +358,15 @@ mod ipv6 {
     fn diff_of_sets_from_ranges_do_not_contain_removed_prefixes() {
         let s: PrefixSet<_> = data_set::<IpPrefixRange<Ipv6Prefix>>("AS-WOLCOMM-ipv6-ranges", 0, 0)
             .read()
-            .into_iter()
+            .iter()
             .collect();
         let t: PrefixSet<_> =
             data_set::<IpPrefixRange<Ipv6Prefix>>("AS-HURRICANE-ipv6-ranges", 0, 0)
                 .read()
-                .into_iter()
+                .iter()
                 .collect();
         let diff = s.clone() - t.clone();
-        let err = t
-            .iter_prefixes()
-            .filter(|p| diff.contains(p.to_owned()))
-            .count();
+        let err = t.iter_prefixes().filter(|p| diff.contains(p)).count();
         assert_eq!(err, 0)
     }
 

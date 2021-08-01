@@ -7,7 +7,7 @@ pub struct DataSet<T>(
     &'static str, // name
     usize,        // prefixes
     usize,        // ranges
-    PhantomData<*const T>,
+    PhantomData<T>,
 );
 
 pub const fn data_set<T>(name: &'static str, prefixes: usize, ranges: usize) -> DataSet<T> {

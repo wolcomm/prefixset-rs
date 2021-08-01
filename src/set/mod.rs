@@ -84,7 +84,7 @@ impl<P: IpPrefix> PrefixSet<P> {
         self
     }
 
-    pub fn contains(&self, prefix: P) -> bool {
+    pub fn contains(&self, prefix: &P) -> bool {
         match &self.root {
             Some(root) => root.search(&prefix.into()).is_some(),
             None => false,

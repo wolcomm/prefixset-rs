@@ -20,10 +20,10 @@ mod new_ipv4_prefix_set {
     fn contains_no_prefixes() -> TestResult {
         let s = setup();
         assert_eq!(s.iter_prefixes().count(), 0);
-        assert!(!s.contains("192.0.2.0/24".parse()?));
-        assert!(!s.contains("192.0.0.0/22".parse()?));
-        assert!(!s.contains("192.0.2.128/25".parse()?));
-        assert!(!s.contains("192.0.4.0/24".parse()?));
+        assert!(!s.contains(&"192.0.2.0/24".parse()?));
+        assert!(!s.contains(&"192.0.0.0/22".parse()?));
+        assert!(!s.contains(&"192.0.2.128/25".parse()?));
+        assert!(!s.contains(&"192.0.4.0/24".parse()?));
         Ok(())
     }
 
@@ -55,16 +55,16 @@ mod new_ipv4_prefix_set {
         #[test]
         fn contains_that_prefix() -> TestResult {
             let s = setup();
-            assert!(s.contains("192.0.2.0/24".parse()?));
+            assert!(s.contains(&"192.0.2.0/24".parse()?));
             Ok(())
         }
 
         #[test]
         fn does_not_contain_others() -> TestResult {
             let s = setup();
-            assert!(!s.contains("192.0.0.0/22".parse()?));
-            assert!(!s.contains("192.0.2.128/25".parse()?));
-            assert!(!s.contains("192.0.4.0/24".parse()?));
+            assert!(!s.contains(&"192.0.0.0/22".parse()?));
+            assert!(!s.contains(&"192.0.2.128/25".parse()?));
+            assert!(!s.contains(&"192.0.4.0/24".parse()?));
             Ok(())
         }
 
@@ -111,8 +111,8 @@ mod new_ipv4_prefix_set {
             #[test]
             fn contains_both_prefixes() -> TestResult {
                 let s = setup();
-                assert!(s.contains("192.0.2.0/24".parse()?));
-                assert!(s.contains("192.0.0.0/22".parse()?));
+                assert!(s.contains(&"192.0.2.0/24".parse()?));
+                assert!(s.contains(&"192.0.0.0/22".parse()?));
                 Ok(())
             }
 
@@ -150,7 +150,7 @@ mod new_ipv4_prefix_set {
                 #[test]
                 fn contains_the_remaining_prefix() -> TestResult {
                     let s = setup();
-                    assert!(s.contains("192.0.0.0/22".parse()?));
+                    assert!(&s.contains(&"192.0.0.0/22".parse()?));
                     Ok(())
                 }
             }
@@ -182,9 +182,9 @@ mod new_ipv4_prefix_set {
                 fn contains_all_prefixes() -> TestResult {
                     let s = setup();
                     println!("{:#?}", s);
-                    assert!(s.contains("192.0.2.0/24".parse()?));
-                    assert!(s.contains("192.0.3.0/24".parse()?));
-                    assert!(s.contains("192.0.0.0/22".parse()?));
+                    assert!(s.contains(&"192.0.2.0/24".parse()?));
+                    assert!(s.contains(&"192.0.3.0/24".parse()?));
+                    assert!(s.contains(&"192.0.0.0/22".parse()?));
                     Ok(())
                 }
 
@@ -223,7 +223,7 @@ mod new_ipv4_prefix_set {
                     #[test]
                     fn contains_the_remaining_prefix() -> TestResult {
                         let s = setup();
-                        assert!(s.contains("192.0.0.0/22".parse()?));
+                        assert!(s.contains(&"192.0.0.0/22".parse()?));
                         Ok(())
                     }
                 }

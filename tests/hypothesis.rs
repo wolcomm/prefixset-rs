@@ -11,7 +11,7 @@ use proptest::{
 
 use prefixset::{IpPrefix, Ipv4Prefix, Ipv6Prefix, PrefixSet};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 struct TestPrefix<P: IpPrefix>(P);
 
 impl<P: IpPrefix> Deref for TestPrefix<P> {
@@ -48,14 +48,14 @@ struct TestPrefixSet<P: IpPrefix> {
     cs: HashSet<P>,
 }
 
-impl<P: IpPrefix> FromIterator<TestPrefix<P>> for TestPrefixSet<P> {
+impl<'a, P: IpPrefix + 'a> FromIterator<&'a TestPrefix<P>> for TestPrefixSet<P> {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = TestPrefix<P>>,
+        I: IntoIterator<Item = &'a TestPrefix<P>>,
     {
         let (ps_iter, cs_iter) = iter.into_iter().tee();
-        let ps = ps_iter.into_iter().map(|p| *p).collect();
-        let cs = cs_iter.into_iter().map(|p| *p).collect();
+        let ps = ps_iter.into_iter().map(|p| &**p).collect();
+        let cs = cs_iter.into_iter().map(|p| **p).collect();
         Self { ps, cs }
     }
 }
@@ -102,7 +102,7 @@ where
 
     fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
         any_with::<Vec<TestPrefix<P>>>((*args).clone())
-            .prop_map(|v| v.into_iter().collect())
+            .prop_map(|v| v.iter().collect())
             .boxed()
     }
 }
@@ -131,7 +131,7 @@ macro_rules! property_tests {
                         prop_assert!(
                             s.cs.to_owned()
                                 .into_iter()
-                                .all(|p| s.ps.contains(p))
+                                .all(|p| s.ps.contains(&p))
                         );
                     }
 

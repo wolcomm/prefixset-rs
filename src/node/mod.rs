@@ -1,15 +1,12 @@
 use std::cmp::min;
 use std::convert::TryInto;
-use std::ops::{BitAnd, BitOr, Sub};
-use std::str::FromStr;
 
 use num::{One, PrimInt, Zero};
 
-use crate::prefix::{IpPrefix, IpPrefixRange};
+use crate::prefix::IpPrefix;
 
 use self::gluemap::GlueMap;
-pub use self::ranges::NodeRangesIter;
-pub use self::tree::NodeTreeIter;
+pub use self::iter::{NodeRangesIter, NodeTreeIter};
 
 enum Comparison {
     Equal,
@@ -310,99 +307,10 @@ impl<P: IpPrefix> Node<P> {
     }
 }
 
-impl<P: IpPrefix> From<P> for Node<P> {
-    fn from(prefix: P) -> Self {
-        Self::new(prefix, GlueMap::singleton(prefix.length()))
-    }
-}
-
-impl<P: IpPrefix> From<IpPrefixRange<P>> for Node<P> {
-    fn from(prefix_range: IpPrefixRange<P>) -> Self {
-        Node::new(prefix_range.base().to_owned(), prefix_range.into())
-    }
-}
-
-impl<P: IpPrefix> From<P> for Box<Node<P>> {
-    fn from(prefix: P) -> Self {
-        Box::new(prefix.into())
-    }
-}
-
-impl<P: IpPrefix> From<IpPrefixRange<P>> for Box<Node<P>> {
-    fn from(prefix_range: IpPrefixRange<P>) -> Self {
-        Box::new(prefix_range.into())
-    }
-}
-
-impl<P: IpPrefix> FromStr for Node<P> {
-    type Err = <P as FromStr>::Err;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let prefix = s.parse::<P>()?;
-        Ok(prefix.into())
-    }
-}
-
-impl<P: IpPrefix> FromStr for Box<Node<P>> {
-    type Err = <P as FromStr>::Err;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.parse().map(Box::new)
-    }
-}
-
-impl<P: IpPrefix> PartialEq for Node<P> {
-    fn eq(&self, other: &Self) -> bool {
-        self.prefix == other.prefix && self.gluemap == other.gluemap
-    }
-}
-
-impl<P: IpPrefix> BitAnd for Box<Node<P>> {
-    type Output = Option<Self>;
-
-    fn bitand(self, rhs: Self) -> Self::Output {
-        self.iter_subtree()
-            .fold(None, |root, node| match rhs.intersect_nodes(node) {
-                Some(new) => {
-                    if let Some(root) = root {
-                        Some(root.add(new))
-                    } else {
-                        Some(new)
-                    }
-                }
-                None => root,
-            })
-    }
-}
-
-impl<P: IpPrefix> BitOr for Box<Node<P>> {
-    type Output = Option<Self>;
-
-    fn bitor(self, rhs: Self) -> Self::Output {
-        Some(self.add(rhs))
-    }
-}
-
-impl<P: IpPrefix> Sub for Box<Node<P>> {
-    type Output = Option<Self>;
-
-    fn sub(self, mut rhs: Self) -> Self::Output {
-        Some(self.remove(&mut rhs))
-    }
-}
-
-impl<'a, P: IpPrefix> IntoIterator for &'a Box<Node<P>> {
-    type Item = &'a Box<Node<P>>;
-    type IntoIter = NodeTreeIter<'a, P>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.into()
-    }
-}
-
+mod from;
 mod gluemap;
-mod ranges;
-mod tree;
+mod iter;
+mod ops;
 
 #[cfg(test)]
 mod tests;

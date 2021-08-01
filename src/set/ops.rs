@@ -137,8 +137,8 @@ mod tests {
                 .partition(|res| res.is_ok());
             assert!(errors.is_empty());
             Self::new()
-                .insert_from(ranges.into_iter().map(|r| r.unwrap()))
-                .insert_from(prefixes.into_iter().map(|p| p.unwrap()))
+                .insert_from(ranges.iter().map(|r| r.as_ref().unwrap()))
+                .insert_from(prefixes.iter().map(|p| p.as_ref().unwrap()))
                 .to_owned()
         }
     }
@@ -576,8 +576,7 @@ mod tests {
         let st = s.clone() - t.clone();
         dbg!(&st);
         assert_eq!(st.iter_prefixes().count(), 6);
-        t.iter_prefixes()
-            .for_each(|p| assert!(!st.contains(p.to_owned())));
+        t.iter_prefixes().for_each(|p| assert!(!st.contains(&p)));
         // let ts = t.clone() | s.clone();
         // dbg!(&ts);
         // assert_eq!(ts.iter_prefixes().count(), 129);
