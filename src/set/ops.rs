@@ -564,22 +564,4 @@ mod tests {
             ].into()
         }
     });
-
-    #[test]
-    fn dups() -> TestResult {
-        let s: PrefixSet<Ipv4Prefix> = vec!["27.0.0.0/22,22,24", "27.0.4.0/22,22,23"].into();
-        dbg!(&s);
-        assert_eq!(s.iter_prefixes().count(), 10);
-        let t: PrefixSet<Ipv4Prefix> = vec!["27.0.0.0/24,24,24", "27.0.4.0/22,22,24"].into();
-        dbg!(&t);
-        assert_eq!(t.iter_prefixes().count(), 8);
-        let st = s.clone() - t.clone();
-        dbg!(&st);
-        assert_eq!(st.iter_prefixes().count(), 6);
-        t.iter_prefixes().for_each(|p| assert!(!st.contains(&p)));
-        // let ts = t.clone() | s.clone();
-        // dbg!(&ts);
-        // assert_eq!(ts.iter_prefixes().count(), 129);
-        Ok(())
-    }
 }
