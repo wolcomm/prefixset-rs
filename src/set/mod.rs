@@ -79,7 +79,7 @@ impl<P: IpPrefix> PrefixSet<P> {
 
     fn aggregate(&mut self) -> &mut Self {
         if let Some(root) = mem::take(&mut self.root) {
-            self.root = root.deduplicate(None).aggregate().compress();
+            self.root = root.aggregate(None)
         }
         self
     }

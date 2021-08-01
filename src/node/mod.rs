@@ -165,52 +165,70 @@ impl<P: IpPrefix> Node<P> {
         self
     }
 
-    pub fn deduplicate(mut self: Box<Self>, mut mask: Option<GlueMap<P>>) -> Box<Self> {
+    pub fn aggregate(mut self: Box<Self>, mut mask: Option<GlueMap<P>>) -> Option<Box<Self>> {
+        // set mask to zero if None given
         if mask.is_none() {
-            mask = Some(GlueMap::zero());
+            mask = Some(GlueMap::zero())
         }
+        // mask is the union of gluemaps of all parent nodes.
+        // if the intersection of mask and self.gluemap is not zero
+        // then self represents one or more deduplicate prefixes.
+        //
+        // unset mask bits in self.gluemap
         self.gluemap &= !mask.unwrap();
+        // set remaining bits of self.gluemap in mask
         *mask.as_mut().unwrap() |= self.gluemap;
+        // recurse child nodes
         if let Some(child) = self.left.take() {
-            self.left = Some(child.deduplicate(mask));
+            self.left = child.aggregate(mask);
         }
         if let Some(child) = self.right.take() {
-            self.right = Some(child.deduplicate(mask));
+            self.right = child.aggregate(mask);
         }
-        self
-    }
-
-    pub fn aggregate(mut self: Box<Self>) -> Box<Self> {
-        if let Some(child) = self.left.take() {
-            self.left = Some(child.aggregate());
-        }
-        if let Some(child) = self.right.take() {
-            self.right = Some(child.aggregate());
-        };
+        // if both left and right child nodes exist, and have the same
+        // length == self.prefix.length() + 1, then any bits set in both
+        // child gluemaps can be aggregated into self.gluemap.
+        //
         let aggr_length = self.prefix().length() + 1;
-        if let (Some(l), Some(r)) = (&mut self.left, &mut self.right) {
+        let did_aggr = if let (Some(l), Some(r)) = (&mut self.left, &mut self.right) {
             if l.prefix().length() == aggr_length && r.prefix().length() == aggr_length {
+                // get the bits set in both child gluemaps
                 let aggr_bits = l.gluemap & r.gluemap;
+                // unset the bits in each child gluemap
                 l.gluemap &= !aggr_bits;
                 r.gluemap &= !aggr_bits;
+                // set them in self.gluemap
                 self.gluemap |= aggr_bits;
+                // indicate whether any aggregation occured
+                aggr_bits != GlueMap::zero()
+            } else {
+                false
             }
+        } else {
+            false
+        };
+        // if aggregation occured, left or right may now be unnecessary glue.
+        // also, since some aggregation into self.gluemap occured, self
+        // cannot be a glue node.
+        if did_aggr {
+            if let Some(child) = self.left.take() {
+                self.left = child.clean();
+            };
+            if let Some(child) = self.right.take() {
+                self.right = child.clean();
+            };
+            Some(self)
+        } else {
+            self.clean()
         }
-        self
     }
 
-    pub fn compress(mut self: Box<Self>) -> Option<Box<Self>> {
-        if let Some(child) = self.left.take() {
-            self.left = child.compress();
-        }
-        if let Some(child) = self.right.take() {
-            self.right = child.compress();
-        }
+    fn clean(self: Box<Self>) -> Option<Box<Self>> {
         if self.gluemap == GlueMap::zero() {
             match (&self.left, &self.right) {
                 (None, None) => None,
-                (Some(_), None) => Some(self.left.unwrap()),
-                (None, Some(_)) => Some(self.right.unwrap()),
+                (Some(_), None) => self.left,
+                (None, Some(_)) => self.right,
                 _ => Some(self),
             }
         } else {

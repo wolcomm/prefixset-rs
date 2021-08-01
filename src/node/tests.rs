@@ -42,11 +42,11 @@ mod subtree_of_three_prefixes {
         use super::*;
 
         fn setup() -> Box<Node<Ipv4Prefix>> {
-            super::setup().aggregate()
+            super::setup().aggregate(None).unwrap()
         }
 
         #[test]
-        fn equal_length_siblings_aggregate() -> TestResult {
+        fn leaf_glue_nodes_are_removed() -> TestResult {
             let n = setup();
             assert!(is_glue(&n));
             let (l, r) = (n.left.unwrap(), n.right.unwrap());
@@ -54,31 +54,9 @@ mod subtree_of_three_prefixes {
             assert_none(l.left)?;
             assert_none(l.right)?;
             assert_eq!(r.gluemap, GlueMap::singleton(16));
-            assert!(is_glue(&r.left.unwrap()));
-            assert!(is_glue(&r.right.unwrap()));
+            assert_none(r.left)?;
+            assert_none(r.right)?;
             Ok(())
-        }
-
-        mod after_compression {
-            use super::*;
-
-            fn setup() -> Box<Node<Ipv4Prefix>> {
-                super::setup().compress().unwrap()
-            }
-
-            #[test]
-            fn leaf_glue_nodes_are_removed() -> TestResult {
-                let n = setup();
-                assert!(is_glue(&n));
-                let (l, r) = (n.left.unwrap(), n.right.unwrap());
-                assert_eq!(l.gluemap, GlueMap::singleton(16));
-                assert_none(l.left)?;
-                assert_none(l.right)?;
-                assert_eq!(r.gluemap, GlueMap::singleton(16));
-                assert_none(r.left)?;
-                assert_none(r.right)?;
-                Ok(())
-            }
         }
     }
 }
@@ -318,7 +296,7 @@ mod new_ipv4_singleton {
             use super::*;
 
             fn setup() -> Box<Node<Ipv4Prefix>> {
-                super::setup().aggregate()
+                super::setup().aggregate(None).unwrap()
             }
 
             #[test]
@@ -397,7 +375,7 @@ mod new_ipv4_singleton {
             use super::*;
 
             fn setup() -> Box<Node<Ipv4Prefix>> {
-                super::setup().aggregate()
+                super::setup().aggregate(None).unwrap()
             }
 
             #[test]
