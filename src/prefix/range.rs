@@ -32,6 +32,12 @@ impl<P: IpPrefix> IpPrefixRange<P> {
     }
 }
 
+impl<P: IpPrefix> From<P> for IpPrefixRange<P> {
+    fn from(prefix: P) -> Self {
+        Self::new(prefix, prefix.length(), prefix.length()).unwrap()
+    }
+}
+
 impl<P: IpPrefix> FromStr for IpPrefixRange<P> {
     type Err = Box<dyn Error>;
 
