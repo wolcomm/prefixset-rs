@@ -60,3 +60,5 @@ impl IpPrefix for Ipv6Prefix {
         self.length
     }
 }
+
+impl_partial_ord!(Ipv6Prefix);

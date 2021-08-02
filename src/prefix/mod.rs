@@ -1,5 +1,7 @@
+use std::cmp::min;
+use std::convert::TryInto;
 use std::error::Error;
-use std::fmt::Binary;
+use std::fmt;
 use std::hash::Hash;
 use std::iter::Sum;
 use std::ops::{AddAssign, BitAndAssign, BitOrAssign, Shl, ShlAssign, Shr, ShrAssign};
@@ -12,26 +14,35 @@ use num::{
     One, PrimInt, Zero,
 };
 
+pub enum Comparison {
+    Equal,
+    Subprefix(u8),
+    Superprefix(u8),
+    Divergent(u8),
+}
+
 pub trait IpPrefix
 where
-    Self: std::fmt::Debug
-        + std::fmt::Display
+    Self: fmt::Debug
+        + fmt::Display
+        + Clone
         + Copy
         + FromStr<Err = AddrParseError>
         + PartialEq
         + Eq
-        + Hash,
+        + Hash
+        + PartialOrd,
     Self::Bits: PrimInt
         + Default
         + CheckedShl
         + CheckedShr
-        + Binary
+        + fmt::Binary
         + AddAssign
         + BitAndAssign
         + BitOrAssign
         + std::fmt::Debug
         + Shl<u8, Output = Self::Bits>
-        + ShlAssign
+        + ShlAssign<u8>
         + Shr<u8, Output = Self::Bits>
         + ShrAssign<u8>
         + Sum,
@@ -58,6 +69,41 @@ where
     fn subprefixes(&self, length: u8) -> Subprefixes<Self> {
         Subprefixes::new(self, length)
     }
+
+    fn compare_with(&self, other: &Self) -> Comparison {
+        let min_lens = min(self.length(), other.length());
+        let diff_map = self.bits() ^ other.bits();
+        let common = min(min_lens, diff_map.leading_zeros().try_into().unwrap());
+        if common == self.length() && common == other.length() {
+            Comparison::Equal
+        } else if common == self.length() && common < other.length() {
+            Comparison::Subprefix(common)
+        } else if common < self.length() && common == other.length() {
+            Comparison::Superprefix(common)
+        } else if common < self.length() && common < other.length() {
+            Comparison::Divergent(common)
+        } else {
+            unreachable!("Common cannot be larger than either prefix length")
+        }
+    }
+}
+
+macro_rules! impl_partial_ord {
+    ( $type:ty ) => {
+        impl PartialOrd for $type
+        where
+            Self: IpPrefix,
+        {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                match self.compare_with(other) {
+                    $crate::prefix::Comparison::Equal => Some(std::cmp::Ordering::Equal),
+                    $crate::prefix::Comparison::Subprefix(_) => Some(std::cmp::Ordering::Less),
+                    $crate::prefix::Comparison::Superprefix(_) => Some(std::cmp::Ordering::Greater),
+                    $crate::prefix::Comparison::Divergent(_) => None,
+                }
+            }
+        }
+    };
 }
 
 #[derive(Debug)]

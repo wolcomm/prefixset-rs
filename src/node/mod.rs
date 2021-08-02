@@ -1,19 +1,9 @@
-use std::cmp::min;
-use std::convert::TryInto;
+use num::{One, Zero};
 
-use num::{One, PrimInt, Zero};
-
-use crate::prefix::IpPrefix;
+use crate::prefix::{Comparison, IpPrefix};
 
 use self::gluemap::GlueMap;
 pub use self::iter::{Children, Ranges};
-
-enum Comparison {
-    Equal,
-    ChildOf(u8),
-    ParentOf(u8),
-    Divergent(u8),
-}
 
 enum Direction {
     Left,
@@ -43,7 +33,7 @@ impl<P: IpPrefix> Node<P> {
     }
 
     pub fn add(mut self: Box<Self>, mut other: Box<Self>) -> Box<Self> {
-        match self.compare_with(&other) {
+        match self.prefix().compare_with(other.prefix()) {
             Comparison::Equal => {
                 self.gluemap |= other.gluemap;
                 if let Some(child) = other.left {
@@ -54,7 +44,7 @@ impl<P: IpPrefix> Node<P> {
                 }
                 self
             }
-            Comparison::ChildOf(common) => {
+            Comparison::Subprefix(common) => {
                 // mask glue map for prefix lengths already present
                 other.gluemap &= !self.gluemap;
                 match other.branch_direction(common) {
@@ -77,7 +67,7 @@ impl<P: IpPrefix> Node<P> {
                 };
                 self
             }
-            Comparison::ParentOf(common) => {
+            Comparison::Superprefix(common) => {
                 self.gluemap &= !other.gluemap;
                 match self.branch_direction(common) {
                     Direction::Left => {
@@ -125,8 +115,8 @@ impl<P: IpPrefix> Node<P> {
         if let Some(mut child) = other.right.take() {
             self = self.remove(&mut child);
         }
-        match self.compare_with(other) {
-            Comparison::ParentOf(_) | Comparison::Equal => {
+        match self.prefix().compare_with(other.prefix()) {
+            Comparison::Superprefix(_) | Comparison::Equal => {
                 // clear gluemap bits and recurse down
                 self.gluemap &= !other.gluemap;
                 if let Some(child) = self.left.take() {
@@ -136,7 +126,7 @@ impl<P: IpPrefix> Node<P> {
                     self.right = Some(child.remove(other));
                 };
             }
-            Comparison::ChildOf(common) => {
+            Comparison::Subprefix(common) => {
                 let deaggr_mask = self.gluemap & other.gluemap;
                 if deaggr_mask != GlueMap::zero() {
                     // deaggregate matching subprefixes before recursing
@@ -237,13 +227,13 @@ impl<P: IpPrefix> Node<P> {
     }
 
     pub fn search(&self, qnode: &Self) -> Option<&Self> {
-        match self.compare_with(qnode) {
-            Comparison::Equal | Comparison::ChildOf(_)
+        match self.prefix().compare_with(qnode.prefix()) {
+            Comparison::Equal | Comparison::Subprefix(_)
                 if self.gluemap & qnode.gluemap == qnode.gluemap =>
             {
                 Some(self)
             }
-            Comparison::ChildOf(common) => match qnode.branch_direction(common) {
+            Comparison::Subprefix(common) => match qnode.branch_direction(common) {
                 Direction::Left => {
                     if let Some(child) = &self.left {
                         child.search(qnode)
@@ -264,10 +254,10 @@ impl<P: IpPrefix> Node<P> {
     }
 
     fn intersect_nodes(&self, qnode: &Self) -> Option<Box<Self>> {
-        match self.compare_with(qnode) {
+        match self.prefix().compare_with(qnode.prefix()) {
             Comparison::Divergent(_) => None,
             cmp => {
-                let prefix = if let Comparison::ChildOf(_) = cmp {
+                let prefix = if let Comparison::Subprefix(_) = cmp {
                     qnode.prefix().to_owned()
                 } else {
                     self.prefix().to_owned()
@@ -295,23 +285,6 @@ impl<P: IpPrefix> Node<P> {
             Direction::Left
         } else {
             Direction::Right
-        }
-    }
-
-    fn compare_with(&self, other: &Self) -> Comparison {
-        let min_lens = min(self.prefix.length(), other.prefix.length());
-        let diff_map = self.prefix.bits() ^ other.prefix.bits();
-        let common = min(min_lens, diff_map.leading_zeros().try_into().unwrap());
-        if common == self.prefix.length() && common == other.prefix.length() {
-            Comparison::Equal
-        } else if common == self.prefix.length() && common < other.prefix.length() {
-            Comparison::ChildOf(common)
-        } else if common < self.prefix.length() && common == other.prefix.length() {
-            Comparison::ParentOf(common)
-        } else if common < self.prefix.length() && common < other.prefix.length() {
-            Comparison::Divergent(common)
-        } else {
-            unreachable!("Common cannot be larger than either prefix length")
         }
     }
 
