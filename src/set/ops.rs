@@ -1,4 +1,4 @@
-use std::cmp::PartialEq;
+use std::cmp::{Ordering, PartialEq, PartialOrd};
 use std::ops::{Add, BitAnd, BitOr, BitXor, Mul, Not, Sub};
 
 use num::{One, Zero};
@@ -109,6 +109,22 @@ impl<P: IpPrefix> PartialEq for PrefixSet<P> {
         }
     }
 }
+
+impl<P: IpPrefix> PartialOrd for PrefixSet<P> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self == other {
+            Some(Ordering::Equal)
+        } else if self.prefixes().all(|p| other.contains(&p)) {
+            Some(Ordering::Less)
+        } else if other.prefixes().all(|p| self.contains(&p)) {
+            Some(Ordering::Greater)
+        } else {
+            None
+        }
+    }
+}
+
+impl<P: IpPrefix> Eq for PrefixSet<P> {}
 
 #[cfg(test)]
 mod tests {

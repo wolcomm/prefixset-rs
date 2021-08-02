@@ -196,6 +196,26 @@ macro_rules! property_tests {
                             &s.cs ^ &t.cs
                         )
                     }
+
+                    #[test]
+                    fn intersection_le_sets(
+                        s in any::<TestPrefixSet<$p>>(),
+                        t in any::<TestPrefixSet<$p>>(),
+                    ) {
+                        let intersection = s.ps.clone() & t.ps.clone();
+                        prop_assert!(intersection <= s.ps);
+                        prop_assert!(intersection <= t.ps);
+                    }
+
+                    #[test]
+                    fn union_ge_sets(
+                        s in any::<TestPrefixSet<$p>>(),
+                        t in any::<TestPrefixSet<$p>>(),
+                    ) {
+                        let union = s.ps.clone() | t.ps.clone();
+                        prop_assert!(union >= s.ps);
+                        prop_assert!(union >= t.ps);
+                    }
                 }
             }
         )*

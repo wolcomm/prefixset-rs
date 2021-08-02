@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt;
 use std::ops::RangeInclusive;
@@ -7,7 +8,7 @@ use ipnet::PrefixLenError;
 
 use super::{IntoSubprefixes, IpPrefix, Subprefixes};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct IpPrefixRange<P: IpPrefix> {
     base: P,
     lower: u8,
@@ -61,9 +62,28 @@ impl<P: IpPrefix> FromStr for IpPrefixRange<P> {
     }
 }
 
-impl<P: IpPrefix> PartialEq for IpPrefixRange<P> {
-    fn eq(&self, other: &Self) -> bool {
-        self.base == other.base && self.lower == other.lower && self.upper == other.upper
+impl<P: IpPrefix> fmt::Display for IpPrefixRange<P> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_fmt(format_args!("{},{},{}", self.base, self.lower, self.upper))
+    }
+}
+
+impl<P: IpPrefix> PartialOrd for IpPrefixRange<P> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match self.base.partial_cmp(&other.base) {
+            Some(Ordering::Equal) if self.range() == other.range() => Some(Ordering::Equal),
+            Some(Ordering::Less | Ordering::Equal)
+                if other.lower <= self.lower && self.upper <= other.upper =>
+            {
+                Some(Ordering::Less)
+            }
+            Some(Ordering::Greater | Ordering::Equal)
+                if self.lower <= other.lower && other.upper <= self.upper =>
+            {
+                Some(Ordering::Greater)
+            }
+            _ => None,
+        }
     }
 }
 
@@ -234,6 +254,22 @@ mod tests {
             r.into_iter().count(),
             (lower..=upper).map(|l| { 1 << (l - 24) }).sum()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn subprefix_order() -> TestResult {
+        let r: IpPrefixRange<Ipv4Prefix> = "192.0.2.0/24,25,25".parse()?;
+        let s: IpPrefixRange<Ipv4Prefix> = "192.0.2.128/25,25,25".parse()?;
+        assert!(dbg!(r) > dbg!(s));
+        Ok(())
+    }
+
+    #[test]
+    fn range_order() -> TestResult {
+        let r: IpPrefixRange<Ipv4Prefix> = "192.0.2.0/24,24,26".parse()?;
+        let s: IpPrefixRange<Ipv4Prefix> = "192.0.2.0/24,25,25".parse()?;
+        assert!(dbg!(r) > dbg!(s));
         Ok(())
     }
 }

@@ -97,8 +97,8 @@ macro_rules! impl_partial_ord {
             fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
                 match self.compare_with(other) {
                     $crate::prefix::Comparison::Equal => Some(std::cmp::Ordering::Equal),
-                    $crate::prefix::Comparison::Subprefix(_) => Some(std::cmp::Ordering::Less),
-                    $crate::prefix::Comparison::Superprefix(_) => Some(std::cmp::Ordering::Greater),
+                    $crate::prefix::Comparison::Subprefix(_) => Some(std::cmp::Ordering::Greater),
+                    $crate::prefix::Comparison::Superprefix(_) => Some(std::cmp::Ordering::Less),
                     $crate::prefix::Comparison::Divergent(_) => None,
                 }
             }
