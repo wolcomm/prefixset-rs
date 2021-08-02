@@ -3,11 +3,30 @@ use crate::{IpPrefixRange, Ipv4Prefix};
 
 use super::PrefixSet;
 
+fn assert_send<T: Send>(_: T) -> TestResult {
+    Ok(())
+}
+fn assert_sync<T: Sync>(_: T) -> TestResult {
+    Ok(())
+}
+
 mod new_ipv4_prefix_set {
     use super::*;
 
     fn setup() -> PrefixSet<Ipv4Prefix> {
         PrefixSet::new()
+    }
+
+    #[test]
+    fn is_send() -> TestResult {
+        let s = setup();
+        assert_send(s)
+    }
+
+    #[test]
+    fn is_sync() -> TestResult {
+        let s = setup();
+        assert_sync(s)
     }
 
     #[test]
