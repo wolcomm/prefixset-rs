@@ -119,7 +119,7 @@ macro_rules! property_tests {
                         s in any::<TestPrefixSet<$p>>(),
                     ) {
                         prop_assert_eq!(
-                            dbg!(s.ps).iter_prefixes().count(),
+                            dbg!(s.ps).prefixes().count(),
                             dbg!(s.cs).len()
                         );
                     }
@@ -140,7 +140,7 @@ macro_rules! property_tests {
                         s in any::<TestPrefixSet<$p>>(),
                     ) {
                         prop_assert!(
-                            s.ps.iter_prefixes()
+                            s.ps.prefixes()
                                 .all(|p| s.cs.contains(&p))
                         );
                     }
@@ -152,7 +152,7 @@ macro_rules! property_tests {
                     ) {
                         prop_assert_eq!(
                             (s.ps & t.ps)
-                                .iter_prefixes()
+                                .prefixes()
                                 .collect::<HashSet<_>>(),
                             &s.cs & &t.cs
                         )
@@ -165,7 +165,7 @@ macro_rules! property_tests {
                     ) {
                         prop_assert_eq!(
                             (s.ps | t.ps)
-                                .iter_prefixes()
+                                .prefixes()
                                 .collect::<HashSet<_>>(),
                             &s.cs | &t.cs
                         )
@@ -178,7 +178,7 @@ macro_rules! property_tests {
                     ) {
                         prop_assert_eq!(
                             (s.ps - t.ps)
-                                .iter_prefixes()
+                                .prefixes()
                                 .collect::<HashSet<_>>(),
                             &s.cs - &t.cs
                         )
@@ -191,7 +191,7 @@ macro_rules! property_tests {
                     ) {
                         prop_assert_eq!(
                             (s.ps ^ t.ps)
-                                .iter_prefixes()
+                                .prefixes()
                                 .collect::<HashSet<_>>(),
                             &s.cs ^ &t.cs
                         )

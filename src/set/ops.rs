@@ -103,7 +103,7 @@ impl<P: IpPrefix> Mul for PrefixSet<P> {
 impl<P: IpPrefix> PartialEq for PrefixSet<P> {
     fn eq(&self, other: &Self) -> bool {
         match (&self.root, &other.root) {
-            (Some(r), Some(s)) => r.iter_subtree().zip(s.iter_subtree()).all(|(m, n)| m == n),
+            (Some(r), Some(s)) => r.children().zip(s.children()).all(|(m, n)| m == n),
             (None, None) => true,
             _ => false,
         }
@@ -220,13 +220,13 @@ mod tests {
 
     #[test]
     fn ipv4_zero_set_is_empty() -> TestResult {
-        assert_eq!(PrefixSet::<Ipv4Prefix>::zero().iter_prefixes().count(), 0);
+        assert_eq!(PrefixSet::<Ipv4Prefix>::zero().prefixes().count(), 0);
         Ok(())
     }
 
     #[test]
     fn ipv6_zero_set_is_empty() -> TestResult {
-        assert_eq!(PrefixSet::<Ipv6Prefix>::zero().iter_prefixes().count(), 0);
+        assert_eq!(PrefixSet::<Ipv6Prefix>::zero().prefixes().count(), 0);
         Ok(())
     }
 

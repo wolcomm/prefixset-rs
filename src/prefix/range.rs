@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use ipnet::PrefixLenError;
 
-use super::{IpPrefix, SubPrefixesIntoIter};
+use super::{IntoSubprefixes, IpPrefix, Subprefixes};
 
 #[derive(Clone, Copy, Debug)]
 pub struct IpPrefixRange<P: IpPrefix> {
@@ -29,6 +29,10 @@ impl<P: IpPrefix> IpPrefixRange<P> {
 
     pub fn range(&self) -> RangeInclusive<u8> {
         self.lower..=self.upper
+    }
+
+    pub fn iter(&self) -> Iter<P> {
+        self.into_iter()
     }
 }
 
@@ -65,7 +69,7 @@ impl<P: IpPrefix> PartialEq for IpPrefixRange<P> {
 
 impl<P: IpPrefix> IntoIterator for IpPrefixRange<P> {
     type Item = P;
-    type IntoIter = IpPrefixRangeIntoIter<P>;
+    type IntoIter = IntoIter<P>;
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter {
@@ -78,14 +82,14 @@ impl<P: IpPrefix> IntoIterator for IpPrefixRange<P> {
 }
 
 #[derive(Debug)]
-pub struct IpPrefixRangeIntoIter<P: IpPrefix> {
+pub struct IntoIter<P: IpPrefix> {
     base: P,
     lower: u8,
     upper: u8,
-    current: Option<SubPrefixesIntoIter<P, P>>,
+    current: Option<IntoSubprefixes<P>>,
 }
 
-impl<P: IpPrefix> Iterator for IpPrefixRangeIntoIter<P> {
+impl<P: IpPrefix> Iterator for IntoIter<P> {
     type Item = P;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -95,7 +99,7 @@ impl<P: IpPrefix> Iterator for IpPrefixRangeIntoIter<P> {
                 None => {
                     let next_length = current.length + 1;
                     if next_length <= self.upper {
-                        self.current = Some(self.base.into_iter_subprefixes(next_length));
+                        self.current = Some(self.base.into_subprefixes(next_length));
                         self.current.as_mut()?.next()
                     } else {
                         None
@@ -103,7 +107,7 @@ impl<P: IpPrefix> Iterator for IpPrefixRangeIntoIter<P> {
                 }
             },
             None => {
-                self.current = Some(self.base.into_iter_subprefixes(self.lower));
+                self.current = Some(self.base.into_subprefixes(self.lower));
                 self.current.as_mut()?.next()
             }
         }
@@ -112,7 +116,7 @@ impl<P: IpPrefix> Iterator for IpPrefixRangeIntoIter<P> {
 
 impl<'a, P: IpPrefix> IntoIterator for &'a IpPrefixRange<P> {
     type Item = P;
-    type IntoIter = IpPrefixRangeIter<'a, P>;
+    type IntoIter = Iter<'a, P>;
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter {
@@ -125,14 +129,14 @@ impl<'a, P: IpPrefix> IntoIterator for &'a IpPrefixRange<P> {
 }
 
 #[derive(Debug)]
-pub struct IpPrefixRangeIter<'a, P: IpPrefix> {
+pub struct Iter<'a, P: IpPrefix> {
     base: &'a P,
     lower: u8,
     upper: u8,
-    current: Option<SubPrefixesIntoIter<P, &'a P>>,
+    current: Option<Subprefixes<'a, P>>,
 }
 
-impl<'a, P: IpPrefix> Iterator for IpPrefixRangeIter<'a, P> {
+impl<'a, P: IpPrefix> Iterator for Iter<'a, P> {
     type Item = P;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -142,7 +146,7 @@ impl<'a, P: IpPrefix> Iterator for IpPrefixRangeIter<'a, P> {
                 None => {
                     let next_length = current.length + 1;
                     if next_length <= self.upper {
-                        self.current = Some(self.base.iter_subprefixes(next_length));
+                        self.current = Some(self.base.subprefixes(next_length));
                         self.current.as_mut()?.next()
                     } else {
                         None
@@ -150,7 +154,7 @@ impl<'a, P: IpPrefix> Iterator for IpPrefixRangeIter<'a, P> {
                 }
             },
             None => {
-                self.current = Some(self.base.iter_subprefixes(self.lower));
+                self.current = Some(self.base.subprefixes(self.lower));
                 self.current.as_mut()?.next()
             }
         }

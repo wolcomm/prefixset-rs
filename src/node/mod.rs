@@ -6,7 +6,7 @@ use num::{One, PrimInt, Zero};
 use crate::prefix::IpPrefix;
 
 use self::gluemap::GlueMap;
-pub use self::iter::{NodeRangesIter, NodeTreeIter};
+pub use self::iter::{Children, Ranges};
 
 enum Comparison {
     Equal,
@@ -143,7 +143,7 @@ impl<P: IpPrefix> Node<P> {
                     self.gluemap &= !deaggr_mask;
                     self = self
                         .prefix
-                        .into_iter_subprefixes(other.prefix.length())
+                        .into_subprefixes(other.prefix.length())
                         .map(|p| Box::new(Self::new(p, deaggr_mask)))
                         .fold(self, |this, n| this.add(n));
                 }
@@ -315,12 +315,12 @@ impl<P: IpPrefix> Node<P> {
         }
     }
 
-    pub fn iter_ranges(&self) -> NodeRangesIter<P> {
+    pub fn ranges(&self) -> Ranges<P> {
         self.into()
     }
 
     #[allow(clippy::needless_lifetimes, clippy::borrowed_box)]
-    pub fn iter_subtree<'a>(self: &'a Box<Self>) -> NodeTreeIter<'a, P> {
+    pub fn children<'a>(self: &'a Box<Self>) -> Children<'a, P> {
         self.into()
     }
 }

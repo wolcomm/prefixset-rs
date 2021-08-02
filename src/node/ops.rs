@@ -14,7 +14,7 @@ impl<P: IpPrefix> BitAnd for Box<Node<P>> {
     type Output = Option<Self>;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        self.iter_subtree()
+        self.children()
             .fold(None, |root, node| match rhs.intersect_nodes(node) {
                 Some(new) => {
                     if let Some(root) = root {

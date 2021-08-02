@@ -2,13 +2,13 @@ use std::iter::IntoIterator;
 use std::mem;
 
 use crate::node::Node;
-use crate::prefix::{IpPrefix, IpPrefixRange};
+use crate::prefix::IpPrefix;
 
 mod from;
 mod iter;
 mod ops;
 
-use self::iter::{PrefixIter, PrefixRangeIter};
+use self::iter::{Prefixes, Ranges};
 
 #[derive(Clone, Debug)]
 pub struct PrefixSet<P: IpPrefix> {
@@ -91,24 +91,24 @@ impl<P: IpPrefix> PrefixSet<P> {
         }
     }
 
-    pub fn iter_prefix_ranges(&self) -> PrefixRangeIter<P> {
-        self.into()
-    }
-
-    pub fn iter_prefixes(&self) -> PrefixIter<P> {
-        self.into()
-    }
-
     pub fn len(&self) -> usize {
-        self.iter_prefixes().count()
+        self.prefixes().count()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.iter_prefix_ranges().count() == 0
+        self.ranges().count() == 0
     }
 
     pub fn clear(&mut self) {
         self.root = None
+    }
+
+    pub fn ranges(&self) -> Ranges<P> {
+        self.into()
+    }
+
+    pub fn prefixes(&self) -> Prefixes<P> {
+        self.into()
     }
 }
 
@@ -119,11 +119,11 @@ impl<P: IpPrefix> Default for PrefixSet<P> {
 }
 
 impl<'a, P: IpPrefix> IntoIterator for &'a PrefixSet<P> {
-    type Item = IpPrefixRange<P>;
-    type IntoIter = PrefixRangeIter<'a, P>;
+    type Item = P;
+    type IntoIter = Prefixes<'a, P>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.iter_prefix_ranges()
+        self.prefixes()
     }
 }
 

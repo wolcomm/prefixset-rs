@@ -19,7 +19,7 @@ mod new_ipv4_prefix_set {
     #[test]
     fn contains_no_prefixes() -> TestResult {
         let s = setup();
-        assert_eq!(s.iter_prefixes().count(), 0);
+        assert_eq!(s.prefixes().count(), 0);
         assert!(!s.contains(&"192.0.2.0/24".parse()?));
         assert!(!s.contains(&"192.0.0.0/22".parse()?));
         assert!(!s.contains(&"192.0.2.128/25".parse()?));
@@ -30,7 +30,7 @@ mod new_ipv4_prefix_set {
     #[test]
     fn iter_over_prefixes_is_empty() -> TestResult {
         let s = setup();
-        let c: Vec<_> = s.iter_prefixes().collect();
+        let c: Vec<_> = s.prefixes().collect();
         assert_eq!(Vec::<Ipv4Prefix>::new(), c);
         Ok(())
     }
@@ -48,7 +48,7 @@ mod new_ipv4_prefix_set {
         fn contains_one_prefix() -> TestResult {
             let s = setup();
             println!("{:#?}", s);
-            assert_eq!(s.iter_prefixes().count(), 1);
+            assert_eq!(s.prefixes().count(), 1);
             Ok(())
         }
 
@@ -71,7 +71,7 @@ mod new_ipv4_prefix_set {
         #[test]
         fn iter_over_prefixes_is_singleton() -> TestResult {
             let s = setup();
-            let c: Vec<_> = s.iter_prefixes().collect();
+            let c: Vec<_> = s.prefixes().collect();
             assert_eq!(vec!["192.0.2.0/24".parse::<Ipv4Prefix>()?], c);
             Ok(())
         }
@@ -104,7 +104,7 @@ mod new_ipv4_prefix_set {
             #[test]
             fn contains_two_prefixes() -> TestResult {
                 let s = setup();
-                assert_eq!(s.iter_prefixes().count(), 2);
+                assert_eq!(s.prefixes().count(), 2);
                 Ok(())
             }
 
@@ -119,7 +119,7 @@ mod new_ipv4_prefix_set {
             #[test]
             fn iter_over_prefixes_is_len_two() -> TestResult {
                 let s = setup();
-                let c: Vec<_> = s.iter_prefixes().collect();
+                let c: Vec<_> = s.prefixes().collect();
                 assert_eq!(
                     vec![
                         "192.0.0.0/22".parse::<Ipv4Prefix>()?,
@@ -143,7 +143,7 @@ mod new_ipv4_prefix_set {
                 fn contains_one_prefix() -> TestResult {
                     let s = setup();
                     println!("{:#?}", s);
-                    assert_eq!(s.iter_prefixes().count(), 1);
+                    assert_eq!(s.prefixes().count(), 1);
                     Ok(())
                 }
 
@@ -167,14 +167,14 @@ mod new_ipv4_prefix_set {
                 #[test]
                 fn contains_three_prefixes() -> TestResult {
                     let s = setup();
-                    assert_eq!(s.iter_prefixes().count(), 3);
+                    assert_eq!(s.prefixes().count(), 3);
                     Ok(())
                 }
 
                 #[test]
                 fn contains_two_prefix_ranges() -> TestResult {
                     let s = setup();
-                    assert_eq!(s.iter_prefix_ranges().count(), 2);
+                    assert_eq!(s.ranges().count(), 2);
                     Ok(())
                 }
 
@@ -191,7 +191,7 @@ mod new_ipv4_prefix_set {
                 #[test]
                 fn iter_over_prefixes_is_len_three() -> TestResult {
                     let s = setup();
-                    let c: Vec<_> = s.iter_prefixes().collect();
+                    let c: Vec<_> = s.prefixes().collect();
                     assert_eq!(
                         vec![
                             "192.0.0.0/22".parse::<Ipv4Prefix>()?,
@@ -216,7 +216,7 @@ mod new_ipv4_prefix_set {
                     fn contains_one_prefix() -> TestResult {
                         let s = setup();
                         println!("{:#?}", s);
-                        assert_eq!(s.iter_prefixes().count(), 1);
+                        assert_eq!(s.prefixes().count(), 1);
                         Ok(())
                     }
 

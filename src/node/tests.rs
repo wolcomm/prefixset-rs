@@ -7,7 +7,7 @@ use super::{GlueMap, Node};
 
 #[allow(clippy::boxed_local)]
 fn subtree_size<P: IpPrefix>(root: Box<Node<P>>) -> usize {
-    root.iter_subtree().count()
+    root.children().count()
 }
 
 fn is_glue<P: IpPrefix>(node: &Node<P>) -> bool {

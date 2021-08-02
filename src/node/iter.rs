@@ -8,7 +8,7 @@ use super::{GlueMap, Node};
 
 impl<'a, P: IpPrefix> IntoIterator for &'a Box<Node<P>> {
     type Item = &'a Box<Node<P>>;
-    type IntoIter = NodeTreeIter<'a, P>;
+    type IntoIter = Children<'a, P>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.into()
@@ -17,13 +17,13 @@ impl<'a, P: IpPrefix> IntoIterator for &'a Box<Node<P>> {
 
 #[derive(Debug)]
 #[allow(clippy::borrowed_box)]
-pub struct NodeTreeIter<'a, P: IpPrefix> {
+pub struct Children<'a, P: IpPrefix> {
     this: Option<&'a Box<Node<P>>>,
-    parent: Option<Box<NodeTreeIter<'a, P>>>,
+    parent: Option<Box<Children<'a, P>>>,
     children: Vec<Option<&'a Box<Node<P>>>>,
 }
 
-impl<P: IpPrefix> Default for NodeTreeIter<'_, P> {
+impl<P: IpPrefix> Default for Children<'_, P> {
     fn default() -> Self {
         Self {
             this: None,
@@ -33,7 +33,7 @@ impl<P: IpPrefix> Default for NodeTreeIter<'_, P> {
     }
 }
 
-impl<'a, P: IpPrefix> From<&'a Box<Node<P>>> for NodeTreeIter<'a, P> {
+impl<'a, P: IpPrefix> From<&'a Box<Node<P>>> for Children<'a, P> {
     fn from(node: &'a Box<Node<P>>) -> Self {
         Self {
             this: Some(node),
@@ -43,7 +43,7 @@ impl<'a, P: IpPrefix> From<&'a Box<Node<P>>> for NodeTreeIter<'a, P> {
     }
 }
 
-impl<'a, P: IpPrefix> Iterator for NodeTreeIter<'a, P> {
+impl<'a, P: IpPrefix> Iterator for Children<'a, P> {
     type Item = &'a Box<Node<P>>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -71,13 +71,13 @@ impl<'a, P: IpPrefix> Iterator for NodeTreeIter<'a, P> {
 }
 
 #[derive(Debug)]
-pub struct NodeRangesIter<'a, P: IpPrefix> {
+pub struct Ranges<'a, P: IpPrefix> {
     this: &'a Node<P>,
     map: GlueMap<P>,
     last: u8,
 }
 
-impl<'a, P: IpPrefix> From<&'a Node<P>> for NodeRangesIter<'a, P> {
+impl<'a, P: IpPrefix> From<&'a Node<P>> for Ranges<'a, P> {
     fn from(node: &'a Node<P>) -> Self {
         Self {
             this: node,
@@ -87,7 +87,7 @@ impl<'a, P: IpPrefix> From<&'a Node<P>> for NodeRangesIter<'a, P> {
     }
 }
 
-impl<'a, P: IpPrefix> Iterator for NodeRangesIter<'a, P> {
+impl<'a, P: IpPrefix> Iterator for Ranges<'a, P> {
     type Item = IpPrefixRange<P>;
 
     fn next(&mut self) -> Option<Self::Item> {

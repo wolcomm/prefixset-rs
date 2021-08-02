@@ -72,7 +72,7 @@ macro_rules! benchmarks {
                     let set: PrefixSet<_> = ds.read().iter().collect();
                     g.throughput(Throughput::Elements(ds.ranges() as u64));
                     g.bench_function(ds.name(), |b| {
-                        b.iter(|| assert_eq!(set.iter_prefix_ranges().count(), ds.ranges()))
+                        b.iter(|| assert_eq!(set.ranges().count(), ds.ranges()))
                     });
                 }
                 g.finish()
@@ -86,7 +86,7 @@ macro_rules! benchmarks {
                     let set: PrefixSet<_> = ds.read().iter().collect();
                     g.throughput(Throughput::Elements(ds.prefixes() as u64));
                     g.bench_function(ds.name(), |b| {
-                        b.iter(|| assert_eq!(set.iter_prefixes().count(), ds.prefixes()))
+                        b.iter(|| assert_eq!(set.prefixes().count(), ds.prefixes()))
                     });
                 }
                 g.finish()

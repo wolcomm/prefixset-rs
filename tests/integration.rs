@@ -20,8 +20,8 @@ mod ipv4 {
             i += 1;
         });
         println!("prefix count: {}", i);
-        println!("prefix iter count: {}", set.iter_prefixes().count());
-        println!("range iter count: {}", set.iter_prefix_ranges().count());
+        println!("prefix iter count: {}", set.prefixes().count());
+        println!("range iter count: {}", set.ranges().count());
     }
 
     #[test]
@@ -29,7 +29,7 @@ mod ipv4 {
         let prefixes: Vec<Ipv4Prefix> = data_set("AS-WOLCOMM-ipv4-prefixes", 0, 0).read();
         let set: PrefixSet<_> = prefixes.iter().collect();
         let prefixes_pre: HashSet<_> = prefixes.into_iter().collect();
-        let prefixes_post: HashSet<_> = set.iter_prefixes().collect();
+        let prefixes_post: HashSet<_> = set.prefixes().collect();
         let mut difference: Vec<_> = (&prefixes_pre ^ &prefixes_post).into_iter().collect();
         difference.sort_by_key(|p| (p.bits(), p.length()));
         println!("{:#?}", difference);
@@ -77,7 +77,7 @@ mod ipv4 {
             .iter()
             .collect();
         let intersection = s & t;
-        assert_eq!(intersection.iter_prefixes().count(), 407473)
+        assert_eq!(intersection.prefixes().count(), 407473)
     }
 
     #[test]
@@ -92,7 +92,7 @@ mod ipv4 {
                 .iter()
                 .collect();
         let intersection = s & t;
-        assert_eq!(intersection.iter_prefixes().count(), 407473)
+        assert_eq!(intersection.prefixes().count(), 407473)
     }
 
     #[test]
@@ -106,7 +106,7 @@ mod ipv4 {
             .iter()
             .collect();
         let union = s | t;
-        assert_eq!(union.iter_prefixes().count(), 1165336)
+        assert_eq!(union.prefixes().count(), 1165336)
     }
 
     #[test]
@@ -121,7 +121,7 @@ mod ipv4 {
                 .iter()
                 .collect();
         let union = s | t;
-        assert_eq!(union.iter_prefixes().count(), 1165336)
+        assert_eq!(union.prefixes().count(), 1165336)
     }
 
     #[test]
@@ -135,7 +135,7 @@ mod ipv4 {
             .iter()
             .collect();
         let xor = s ^ t;
-        assert_eq!(xor.iter_prefixes().count(), 757863)
+        assert_eq!(xor.prefixes().count(), 757863)
     }
     #[test]
     fn xor_of_sets_from_ranges_has_expected_size() {
@@ -149,7 +149,7 @@ mod ipv4 {
                 .iter()
                 .collect();
         let xor = s ^ t;
-        assert_eq!(xor.iter_prefixes().count(), 757863)
+        assert_eq!(xor.prefixes().count(), 757863)
     }
 
     #[test]
@@ -163,7 +163,7 @@ mod ipv4 {
             .iter()
             .collect();
         let diff = s.clone() - t.clone();
-        let err = t.iter_prefixes().filter(|p| diff.contains(p)).count();
+        let err = t.prefixes().filter(|p| diff.contains(p)).count();
         assert_eq!(err, 0)
     }
 
@@ -179,7 +179,7 @@ mod ipv4 {
                 .iter()
                 .collect();
         let diff = s.clone() - t.clone();
-        let err = t.iter_prefixes().filter(|p| diff.contains(p)).count();
+        let err = t.prefixes().filter(|p| diff.contains(p)).count();
         assert_eq!(err, 0)
     }
 
@@ -207,8 +207,8 @@ mod ipv6 {
             i += 1;
         });
         println!("prefix count: {}", i);
-        println!("prefix iter count: {}", set.iter_prefixes().count());
-        println!("range iter count: {}", set.iter_prefix_ranges().count());
+        println!("prefix iter count: {}", set.prefixes().count());
+        println!("range iter count: {}", set.ranges().count());
     }
 
     #[test]
@@ -216,7 +216,7 @@ mod ipv6 {
         let prefixes: Vec<Ipv6Prefix> = data_set("AS-WOLCOMM-ipv6-prefixes", 0, 0).read();
         let set: PrefixSet<_> = prefixes.iter().collect();
         let prefixes_pre: HashSet<_> = prefixes.into_iter().collect();
-        let prefixes_post: HashSet<_> = set.iter_prefixes().collect();
+        let prefixes_post: HashSet<_> = set.prefixes().collect();
         let mut difference: Vec<_> = (&prefixes_pre ^ &prefixes_post).into_iter().collect();
         difference.sort_by_key(|p| (p.bits(), p.length()));
         println!("{:#?}", difference);
@@ -264,7 +264,7 @@ mod ipv6 {
             .iter()
             .collect();
         let intersection = s & t;
-        assert_eq!(intersection.iter_prefixes().count(), 146252)
+        assert_eq!(intersection.prefixes().count(), 146252)
     }
 
     #[test]
@@ -279,7 +279,7 @@ mod ipv6 {
                 .iter()
                 .collect();
         let intersection = s & t;
-        assert_eq!(intersection.iter_prefixes().count(), 146252)
+        assert_eq!(intersection.prefixes().count(), 146252)
     }
 
     #[test]
@@ -293,7 +293,7 @@ mod ipv6 {
             .iter()
             .collect();
         let union = s | t;
-        assert_eq!(union.iter_prefixes().count(), 347267)
+        assert_eq!(union.prefixes().count(), 347267)
     }
 
     #[test]
@@ -308,7 +308,7 @@ mod ipv6 {
                 .iter()
                 .collect();
         let union = s | t;
-        assert_eq!(union.iter_prefixes().count(), 347267)
+        assert_eq!(union.prefixes().count(), 347267)
     }
 
     #[test]
@@ -322,7 +322,7 @@ mod ipv6 {
             .iter()
             .collect();
         let xor = s ^ t;
-        assert_eq!(xor.iter_prefixes().count(), 201015)
+        assert_eq!(xor.prefixes().count(), 201015)
     }
     #[test]
     fn xor_of_sets_from_ranges_has_expected_size() {
@@ -336,7 +336,7 @@ mod ipv6 {
                 .iter()
                 .collect();
         let xor = s ^ t;
-        assert_eq!(xor.iter_prefixes().count(), 201015)
+        assert_eq!(xor.prefixes().count(), 201015)
     }
 
     #[test]
@@ -350,7 +350,7 @@ mod ipv6 {
             .iter()
             .collect();
         let diff = s.clone() - t.clone();
-        let err = t.iter_prefixes().filter(|p| diff.contains(p)).count();
+        let err = t.prefixes().filter(|p| diff.contains(p)).count();
         assert_eq!(err, 0)
     }
 
@@ -366,7 +366,7 @@ mod ipv6 {
                 .iter()
                 .collect();
         let diff = s.clone() - t.clone();
-        let err = t.iter_prefixes().filter(|p| diff.contains(p)).count();
+        let err = t.prefixes().filter(|p| diff.contains(p)).count();
         assert_eq!(err, 0)
     }
 
