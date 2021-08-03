@@ -7,6 +7,15 @@ use crate::error::{Error, Result};
 
 use super::IpPrefix;
 
+/// An implementation of [`IpPrefix`] for the IPv4 address family.
+///
+/// ``` rust
+/// # use prefixset::{Error, IpPrefix, Ipv4Prefix};
+/// # fn main() -> Result<(), Error> {
+/// let p: Ipv4Prefix = "192.0.2.0/24".parse()?;
+/// assert_eq!(p.length(), 24);
+/// # Ok(())
+/// # }
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Ipv4Prefix {
     bits: u32,

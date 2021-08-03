@@ -3,6 +3,7 @@ use crate::prefix::{self, IpPrefix};
 
 use super::PrefixSet;
 
+/// Non-consuming iterator returned by [`PrefixSet<P>::ranges()`].
 #[derive(Debug)]
 pub struct Ranges<'a, P: IpPrefix> {
     tree_iter: Option<node::Children<'a, P>>,
@@ -41,6 +42,7 @@ impl<'a, P: IpPrefix> Iterator for Ranges<'a, P> {
     }
 }
 
+/// Non-consuming iterator returned by [`PrefixSet<P>::prefixes()`].
 #[derive(Debug)]
 pub struct Prefixes<'a, P: IpPrefix> {
     ranges_iter: Ranges<'a, P>,

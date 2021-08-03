@@ -1,3 +1,5 @@
+//! Traits and types defining IP prefix objects that can be contained in a
+//! [`PrefixSet<P>`](crate::PrefixSet).
 use std::cmp::min;
 use std::convert::TryInto;
 use std::fmt;
@@ -13,13 +15,29 @@ use num::{
 
 use crate::error::{Error, Result};
 
+/// The result of comparing prefixes with [`IpPrefix::compare_with()`].
+///
+/// The contained values are the number of bits shared in common between the
+/// two prefixes.
 pub enum Comparison {
+    /// `self` and `other` are equal.
     Equal,
+    /// `other` is a sub-prefix of `self`.
     Subprefix(u8),
+    /// `other` is a super-prefix of `self`.
     Superprefix(u8),
+    /// `other` is neither sub- nor super-prefix of `self`.
     Divergent(u8),
 }
 
+/// Provides bounds and methods for types `T` over which a
+/// [`PrefixSet<T>`](crate::PrefixSet) can be constructed.
+///
+/// Default implementations are provided for [IPv4](crate::Ipv4Prefix) and
+/// [IPv6](crate::Ipv6Prefix) prefixes.
+///
+/// Users are unlikely to need to implement this directly. It is provided in the
+/// public API mainly to allow writing code that is generic over address family.
 pub trait IpPrefix
 where
     Self: fmt::Debug
@@ -46,14 +64,21 @@ where
         + ShrAssign<u8>
         + Sum,
 {
+    /// The type used to represent the IP prefix as a bit string.
     type Bits;
 
+    /// The maximum length in bits of an IP prefix.
     const MAX_LENGTH: u8;
 
+    /// Construct a new `IpPrefix`.
     fn new(addr: Self::Bits, length: u8) -> Result<Self>;
+    /// Get the bit string representation of the IP prefix.
     fn bits(&self) -> Self::Bits;
+    /// Get the length of the IP prefix in bits.
     fn length(&self) -> u8;
 
+    /// Construct a new `IpPrefix`, with the upper `length` bits equal to
+    /// `self`, and the given prefix length.
     fn new_from(&self, length: u8) -> Result<Self> {
         let mask = (!Self::Bits::zero())
             .checked_shl((Self::MAX_LENGTH - length).into())
@@ -61,14 +86,20 @@ where
         Self::new(self.bits() & mask, length)
     }
 
+    /// Iterator over the sub-prefixes of `self` having prefix length `length`.
+    /// Consumes `self`.
     fn into_subprefixes(self, length: u8) -> IntoSubprefixes<Self> {
         IntoSubprefixes::new(self, length)
     }
 
+    /// Iterator over the sub-prefixes of `self` having prefix length `length`.
+    /// Doesn't consume `self`.
     fn subprefixes(&self, length: u8) -> Subprefixes<Self> {
         Subprefixes::new(self, length)
     }
 
+    /// Compare `self` with another prefix to determine whether one is a
+    /// super-prefix of the other.
     fn compare_with(&self, other: &Self) -> Comparison {
         let min_lens = min(self.length(), other.length());
         let diff_map = self.bits() ^ other.bits();
@@ -105,6 +136,7 @@ macro_rules! impl_partial_ord {
     };
 }
 
+/// A consuming iterator over the sub-prefixes of an [`IpPrefix`].
 #[derive(Debug)]
 pub struct IntoSubprefixes<P: IpPrefix> {
     base: P,
@@ -150,6 +182,7 @@ impl<P: IpPrefix> Iterator for IntoSubprefixes<P> {
     }
 }
 
+/// A non-consuming iterator over the sub-prefixes of an [`IpPrefix`].
 #[derive(Debug)]
 pub struct Subprefixes<'a, P: IpPrefix> {
     base: &'a P,

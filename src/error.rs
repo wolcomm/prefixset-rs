@@ -3,11 +3,18 @@ use std::num::ParseIntError;
 
 use ipnet::{AddrParseError, PrefixLenError};
 
+/// Errors returned by construction and parsing operations.
 #[derive(Debug)]
 pub enum Error {
+    /// The IP address or prefix couldn't be parsed.
     AddrParse(AddrParseError),
+    /// The IP prefix length was out of bounds.
     PrefixLen(PrefixLenError),
-    RangeParse { source: Option<ParseIntError> },
+    /// The IP prefix range couldn't be parsed.
+    RangeParse {
+        /// The error returned during parsing, if any.
+        source: Option<ParseIntError>,
+    },
 }
 
 impl std::error::Error for Error {

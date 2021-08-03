@@ -1,3 +1,4 @@
+//! [`IpPrefixRange<P>`] and related types.
 use std::cmp::Ordering;
 use std::fmt;
 use std::ops::RangeInclusive;
@@ -9,6 +10,20 @@ use crate::error::{Error, Result};
 
 use super::{IntoSubprefixes, IpPrefix, Subprefixes};
 
+/// An object representing a contigious range of [`IpPrefix`]s, covered by a
+/// common super-prefix.
+///
+/// ``` rust
+/// # use prefixset::{Error, Ipv4Prefix, IpPrefixRange};
+/// # fn main() -> Result<(), Error> {
+/// let range = IpPrefixRange::new(
+///     "192.0.2.0/24".parse::<Ipv4Prefix>()?,  // covering super-prefix
+///     26,                                     // prefix-length lower bound (inclusive)
+///     28,                                     // prefix-length upper bound (inclusive)
+/// )?;
+/// assert_eq!(range.iter().count(), 28);
+/// # Ok(())
+/// # }
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct IpPrefixRange<P: IpPrefix> {
     base: P,
@@ -17,6 +32,8 @@ pub struct IpPrefixRange<P: IpPrefix> {
 }
 
 impl<P: IpPrefix> IpPrefixRange<P> {
+    /// Construct a new [`IpPrefixRange<P>`] from a base [`IpPrefix`]
+    /// along with lower and upper prefix-length bounds.
     pub fn new(base: P, lower: u8, upper: u8) -> Result<Self> {
         if base.length() > lower || lower > upper || upper > P::MAX_LENGTH {
             println!("base: {:?}, lower: {}, upper: {}", base, lower, upper);
@@ -25,14 +42,28 @@ impl<P: IpPrefix> IpPrefixRange<P> {
         Ok(Self { base, lower, upper })
     }
 
+    /// Get the covering super-prefix of `self`.
     pub fn base(&self) -> &P {
         &self.base
     }
 
+    /// Get the range of prefix-lengths included in `self`.
     pub fn range(&self) -> RangeInclusive<u8> {
         self.lower..=self.upper
     }
 
+    /// Get an iterator over the `IpPrefix`s included in `self`.
+    ///
+    /// ``` rust
+    /// # use prefixset::{Error, Ipv4Prefix, IpPrefixRange};
+    /// # fn main() -> Result<(), Error> {
+    /// let range = IpPrefixRange::new("192.0.2.0/24".parse::<Ipv4Prefix>()?, 25, 25)?;
+    /// let mut prefixes = range.iter();
+    /// assert_eq!(prefixes.next(), Some("192.0.2.0/25".parse()?));
+    /// assert_eq!(prefixes.next(), Some("192.0.2.128/25".parse()?));
+    /// assert_eq!(prefixes.next(), None);
+    /// # Ok(())
+    /// # }
     pub fn iter(&self) -> Iter<P> {
         self.into_iter()
     }
@@ -102,6 +133,7 @@ impl<P: IpPrefix> IntoIterator for IpPrefixRange<P> {
     }
 }
 
+/// Consuming iterator returned by [`IpPrefixRange<P>::into_iter()`].
 #[derive(Debug)]
 pub struct IntoIter<P: IpPrefix> {
     base: P,
@@ -149,6 +181,7 @@ impl<'a, P: IpPrefix> IntoIterator for &'a IpPrefixRange<P> {
     }
 }
 
+/// Non-consuming iterator returned by [`IpPrefixRange<P>::iter()`].
 #[derive(Debug)]
 pub struct Iter<'a, P: IpPrefix> {
     base: &'a P,
