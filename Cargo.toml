@@ -2,7 +2,13 @@
 name = "prefixset"
 version = "0.1.0"
 authors = ["Ben Maddison <benm@workonline.africa>"]
+description = "An efficient set container for IP address prefixes"
 edition = "2018"
+license = "MIT"
+repository = "https://github.com/wolcomm/prefix-set-rs"
+readme = "README.md"
+keywords = ["prefix", "route", "bgp", "networking", "ip"]
+categories = ["data-structures", "network-programming"]
 
 [lib]
 bench = false
@@ -17,6 +23,7 @@ itertools = "^0.10"
 paste = "^1.0"
 proptest = "^1.0"
 utils = {path = "utils"}
+version-sync = "^0.9"
 
 [[bench]]
 name = "bench"
