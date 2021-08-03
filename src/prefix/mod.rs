@@ -1,18 +1,17 @@
 use std::cmp::min;
 use std::convert::TryInto;
-use std::error::Error;
 use std::fmt;
 use std::hash::Hash;
 use std::iter::Sum;
 use std::ops::{AddAssign, BitAndAssign, BitOrAssign, Shl, ShlAssign, Shr, ShrAssign};
 use std::str::FromStr;
 
-use ipnet::AddrParseError;
-
 use num::{
     traits::{CheckedShl, CheckedShr},
     One, PrimInt, Zero,
 };
+
+use crate::error::{Error, Result};
 
 pub enum Comparison {
     Equal,
@@ -27,7 +26,7 @@ where
         + fmt::Display
         + Clone
         + Copy
-        + FromStr<Err = AddrParseError>
+        + FromStr<Err = Error>
         + PartialEq
         + Eq
         + Hash
@@ -51,11 +50,11 @@ where
 
     const MAX_LENGTH: u8;
 
-    fn new(addr: Self::Bits, length: u8) -> Result<Self, Box<dyn Error>>;
+    fn new(addr: Self::Bits, length: u8) -> Result<Self>;
     fn bits(&self) -> Self::Bits;
     fn length(&self) -> u8;
 
-    fn new_from(&self, length: u8) -> Result<Self, Box<dyn Error>> {
+    fn new_from(&self, length: u8) -> Result<Self> {
         let mask = (!Self::Bits::zero())
             .checked_shl((Self::MAX_LENGTH - length).into())
             .unwrap_or_default();

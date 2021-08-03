@@ -1,10 +1,11 @@
 use std::cmp::Ordering;
-use std::error::Error;
 use std::fmt;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
 
 use ipnet::PrefixLenError;
+
+use crate::error::{Error, Result};
 
 use super::{IntoSubprefixes, IpPrefix, Subprefixes};
 
@@ -16,10 +17,10 @@ pub struct IpPrefixRange<P: IpPrefix> {
 }
 
 impl<P: IpPrefix> IpPrefixRange<P> {
-    pub fn new(base: P, lower: u8, upper: u8) -> Result<Self, Box<dyn Error>> {
+    pub fn new(base: P, lower: u8, upper: u8) -> Result<Self> {
         if base.length() > lower || lower > upper || upper > P::MAX_LENGTH {
             println!("base: {:?}, lower: {}, upper: {}", base, lower, upper);
-            return Err(Box::new(PrefixLenError));
+            return Err(Error::PrefixLen(PrefixLenError));
         }
         Ok(Self { base, lower, upper })
     }
@@ -44,19 +45,19 @@ impl<P: IpPrefix> From<P> for IpPrefixRange<P> {
 }
 
 impl<P: IpPrefix> FromStr for IpPrefixRange<P> {
-    type Err = Box<dyn Error>;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Box<dyn Error>> {
+    fn from_str(s: &str) -> Result<Self> {
         let (prefix, lower, upper) = match s.split_once(',') {
             Some((prefix_str, range_str)) => {
                 let prefix = prefix_str.parse::<P>()?;
                 let (lower, upper) = match range_str.split_once(',') {
                     Some((l, u)) => (l.parse()?, u.parse()?),
-                    None => return Err(PrefixRangeParseErr(()).into()),
+                    None => return Err(Error::RangeParse { source: None }),
                 };
                 (prefix, lower, upper)
             }
-            None => return Err(PrefixRangeParseErr(()).into()),
+            None => return Err(Error::RangeParse { source: None }),
         };
         Self::new(prefix, lower, upper)
     }
@@ -183,16 +184,16 @@ impl<'a, P: IpPrefix> Iterator for Iter<'a, P> {
 
 #[cfg(test)]
 mod tests {
-    use super::IpPrefixRange;
-    use crate::tests::{assert_none, TestResult};
+    use super::{Error, IpPrefixRange};
+    use crate::tests::TestResult;
     use crate::Ipv4Prefix;
 
     #[test]
     fn invalid_lower() -> TestResult {
         let p: Ipv4Prefix = "192.0.2.0/24".parse()?;
         match IpPrefixRange::new(p, 23, 24) {
-            Err(_) => Ok(()),
-            Ok(_) => Err("Expected 'PrefixLenError'".into()),
+            Err(Error::PrefixLen(_)) => Ok(()),
+            _ => Err("Expected 'PrefixLenError'".into()),
         }
     }
 
@@ -200,17 +201,17 @@ mod tests {
     fn invalid_upper() -> TestResult {
         let p: Ipv4Prefix = "192.0.2.0/24".parse()?;
         match IpPrefixRange::new(p, 23, 24) {
-            Err(_) => Ok(()),
-            Ok(_) => Err("Expected 'PrefixLenError'".into()),
+            Err(Error::PrefixLen(_)) => Ok(()),
+            _ => Err("Expected 'PrefixLenError'".into()),
         }
     }
 
     #[test]
     fn invalid_range() -> TestResult {
         let p: Ipv4Prefix = "192.0.2.0/24".parse()?;
-        match IpPrefixRange::new(p, 23, 24) {
-            Err(_) => Ok(()),
-            Ok(_) => Err("Expected 'PrefixLenError'".into()),
+        match IpPrefixRange::new(p, 25, 24) {
+            Err(Error::PrefixLen(_)) => Ok(()),
+            _ => Err("Expected 'PrefixLenError'".into()),
         }
     }
 
@@ -220,7 +221,7 @@ mod tests {
         let r = IpPrefixRange::new(p, 24, 24)?;
         let mut iter = r.into_iter();
         assert_eq!(iter.next().unwrap(), p);
-        assert_none(iter.next())?;
+        assert!(iter.next().is_none());
         Ok(())
     }
 
@@ -241,7 +242,7 @@ mod tests {
         let mut iter = r.into_iter();
         assert_eq!(iter.next().unwrap(), "192.0.2.0/25".parse()?);
         assert_eq!(iter.next().unwrap(), "192.0.2.128/25".parse()?);
-        assert_none(iter.next())?;
+        assert!(iter.next().is_none());
         Ok(())
     }
 
@@ -271,16 +272,5 @@ mod tests {
         let s: IpPrefixRange<Ipv4Prefix> = "192.0.2.0/24,25,25".parse()?;
         assert!(dbg!(r) > dbg!(s));
         Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PrefixRangeParseErr(());
-
-impl Error for PrefixRangeParseErr {}
-
-impl fmt::Display for PrefixRangeParseErr {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.write_str("invalid IP prefix range syntax")
     }
 }

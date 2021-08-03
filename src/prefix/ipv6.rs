@@ -1,8 +1,9 @@
-use std::error::Error;
 use std::fmt;
 use std::str::FromStr;
 
-use ipnet::{AddrParseError, Ipv6Net, PrefixLenError};
+use ipnet::{Ipv6Net, PrefixLenError};
+
+use crate::error::{Error, Result};
 
 use super::IpPrefix;
 
@@ -28,9 +29,9 @@ impl From<Ipv6Net> for Ipv6Prefix {
 }
 
 impl FromStr for Ipv6Prefix {
-    type Err = AddrParseError;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self> {
         Ok(s.parse::<Ipv6Net>()?.into())
     }
 }
@@ -45,9 +46,9 @@ impl IpPrefix for Ipv6Prefix {
     type Bits = u128;
     const MAX_LENGTH: u8 = 128;
 
-    fn new(addr: Self::Bits, length: u8) -> Result<Self, Box<dyn Error>> {
+    fn new(addr: Self::Bits, length: u8) -> Result<Self> {
         if length > Self::MAX_LENGTH {
-            return Err(Box::new(PrefixLenError));
+            return Err(Error::PrefixLen(PrefixLenError));
         }
         Ok(Self { bits: addr, length })
     }

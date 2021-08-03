@@ -1,17 +1,34 @@
-use std::error::Error;
+use std::fmt;
 
-pub type TestResult = Result<(), Box<dyn Error>>;
+use crate::error::Error;
 
-pub fn assert_none<T>(opt: Option<T>) -> TestResult {
-    if opt.is_some() {
-        return Err("expected None".into());
-    };
-    Ok(())
+#[derive(Debug)]
+pub enum TestError {
+    Wrapped(Error),
+    Str(&'static str),
 }
 
-pub fn assert_some<T>(opt: Option<T>) -> TestResult {
-    if opt.is_none() {
-        return Err("expected Some".into());
-    };
-    Ok(())
+impl std::error::Error for TestError {}
+
+impl fmt::Display for TestError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Wrapped(err) => err.fmt(f),
+            Self::Str(msg) => f.write_str(msg),
+        }
+    }
 }
+
+impl From<Error> for TestError {
+    fn from(err: Error) -> Self {
+        Self::Wrapped(err)
+    }
+}
+
+impl From<&'static str> for TestError {
+    fn from(msg: &'static str) -> Self {
+        Self::Str(msg)
+    }
+}
+
+pub type TestResult = Result<(), TestError>;

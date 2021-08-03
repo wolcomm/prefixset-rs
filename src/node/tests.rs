@@ -1,6 +1,6 @@
 use num::Zero;
 
-use crate::tests::{assert_none, assert_some, TestResult};
+use crate::tests::TestResult;
 use crate::{IpPrefix, IpPrefixRange, Ipv4Prefix, Ipv6Prefix};
 
 use super::{GlueMap, Node};
@@ -30,8 +30,8 @@ mod subtree_of_three_prefixes {
         assert!(is_glue(&n));
         let (l, r) = (n.left.unwrap(), n.right.unwrap());
         assert_eq!(l.gluemap, GlueMap::singleton(16));
-        assert_none(l.left)?;
-        assert_none(l.right)?;
+        assert!(l.left.is_none());
+        assert!(l.right.is_none());
         assert!(is_glue(&r));
         assert_eq!(r.left.unwrap().gluemap, GlueMap::singleton(16));
         assert_eq!(r.right.unwrap().gluemap, GlueMap::singleton(16));
@@ -51,11 +51,11 @@ mod subtree_of_three_prefixes {
             assert!(is_glue(&n));
             let (l, r) = (n.left.unwrap(), n.right.unwrap());
             assert_eq!(l.gluemap, GlueMap::singleton(16));
-            assert_none(l.left)?;
-            assert_none(l.right)?;
+            assert!(l.left.is_none());
+            assert!(l.right.is_none());
             assert_eq!(r.gluemap, GlueMap::singleton(16));
-            assert_none(r.left)?;
-            assert_none(r.right)?;
+            assert!(r.left.is_none());
+            assert!(r.right.is_none());
             Ok(())
         }
     }
@@ -71,8 +71,8 @@ mod new_ipv4_singleton {
     #[test]
     fn has_none_children() -> TestResult {
         let n = setup();
-        assert_none(n.left)?;
-        assert_none(n.right)?;
+        assert!(n.left.is_none());
+        assert!(n.right.is_none());
         Ok(())
     }
 
@@ -135,13 +135,15 @@ mod new_ipv4_singleton {
         #[test]
         fn has_some_right_child() -> TestResult {
             let n = setup();
-            assert_some(n.right)
+            assert!(n.right.is_some());
+            Ok(())
         }
 
         #[test]
         fn has_none_left_child() -> TestResult {
             let n = setup();
-            assert_none(n.left)
+            assert!(n.left.is_none());
+            Ok(())
         }
 
         #[test]
@@ -179,13 +181,15 @@ mod new_ipv4_singleton {
         #[test]
         fn has_some_right_child() -> TestResult {
             let n = setup();
-            assert_some(n.right)
+            assert!(n.right.is_some());
+            Ok(())
         }
 
         #[test]
         fn has_none_left_child() -> TestResult {
             let n = setup();
-            assert_none(n.left)
+            assert!(n.left.is_none());
+            Ok(())
         }
 
         #[test]
@@ -216,13 +220,15 @@ mod new_ipv4_singleton {
         #[test]
         fn has_some_left_child() -> TestResult {
             let n = setup();
-            assert_some(n.left)
+            assert!(n.left.is_some());
+            Ok(())
         }
 
         #[test]
         fn has_none_right_child() -> TestResult {
             let n = setup();
-            assert_none(n.right)
+            assert!(n.right.is_none());
+            Ok(())
         }
 
         #[test]
@@ -262,13 +268,15 @@ mod new_ipv4_singleton {
         #[test]
         fn has_some_left_child() -> TestResult {
             let n = setup();
-            assert_some(n.left)
+            assert!(n.left.is_some());
+            Ok(())
         }
 
         #[test]
         fn has_some_right_child() -> TestResult {
             let n = setup();
-            assert_some(n.right)
+            assert!(n.right.is_some());
+            Ok(())
         }
 
         #[test]
@@ -341,13 +349,15 @@ mod new_ipv4_singleton {
         #[test]
         fn has_some_left_child() -> TestResult {
             let n = setup();
-            assert_some(n.left)
+            assert!(n.left.is_some());
+            Ok(())
         }
 
         #[test]
         fn has_some_right_child() -> TestResult {
             let n = setup();
-            assert_some(n.right)
+            assert!(n.right.is_some());
+            Ok(())
         }
 
         #[test]
@@ -398,8 +408,8 @@ mod new_ipv6_singleton {
     #[test]
     fn has_none_children() -> TestResult {
         let n = setup();
-        assert_none(n.left)?;
-        assert_none(n.right)?;
+        assert!(n.left.is_none());
+        assert!(n.right.is_none());
         Ok(())
     }
 
@@ -462,13 +472,15 @@ mod new_ipv6_singleton {
         #[test]
         fn has_some_left_child() -> TestResult {
             let n = setup();
-            assert_some(n.left)
+            assert!(n.left.is_some());
+            Ok(())
         }
 
         #[test]
         fn has_none_right_child() -> TestResult {
             let n = setup();
-            assert_none(n.right)
+            assert!(n.right.is_none());
+            Ok(())
         }
 
         #[test]
@@ -506,13 +518,15 @@ mod new_ipv6_singleton {
         #[test]
         fn has_some_left_child() -> TestResult {
             let n = setup();
-            assert_some(n.left)
+            assert!(n.left.is_some());
+            Ok(())
         }
 
         #[test]
         fn has_none_right_child() -> TestResult {
             let n = setup();
-            assert_none(n.right)
+            assert!(n.right.is_none());
+            Ok(())
         }
 
         #[test]
@@ -548,15 +562,17 @@ mod new_ipv6_singleton {
         }
 
         #[test]
-        fn has_some_right_child() -> TestResult {
+        fn has_none_left_child() -> TestResult {
             let n = setup();
-            assert_some(n.right)
+            assert!(n.left.is_none());
+            Ok(())
         }
 
         #[test]
-        fn has_none_left_child() -> TestResult {
-            let n = dbg!(setup());
-            assert_none(n.left)
+        fn has_some_right_child() -> TestResult {
+            let n = setup();
+            assert!(n.right.is_some());
+            Ok(())
         }
 
         #[test]
@@ -594,13 +610,15 @@ mod new_ipv6_singleton {
         #[test]
         fn has_some_left_child() -> TestResult {
             let n = setup();
-            assert_some(n.left)
+            assert!(n.left.is_some());
+            Ok(())
         }
 
         #[test]
         fn has_some_right_child() -> TestResult {
             let n = setup();
-            assert_some(n.right)
+            assert!(n.right.is_some());
+            Ok(())
         }
 
         #[test]

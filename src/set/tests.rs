@@ -1,4 +1,4 @@
-use crate::tests::{assert_none, TestResult};
+use crate::tests::TestResult;
 use crate::{IpPrefixRange, Ipv4Prefix};
 
 use super::PrefixSet;
@@ -32,7 +32,8 @@ mod new_ipv4_prefix_set {
     #[test]
     fn is_emtpy() -> TestResult {
         let s = setup();
-        assert_none(s.root)
+        assert!(s.root.is_none());
+        Ok(())
     }
 
     #[test]
@@ -107,7 +108,8 @@ mod new_ipv4_prefix_set {
             #[test]
             fn is_emtpy() -> TestResult {
                 let s = setup();
-                assert_none(s.root)
+                assert!(s.root.is_none());
+                Ok(())
             }
         }
 

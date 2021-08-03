@@ -1,6 +1,7 @@
 extern crate ipnet;
 extern crate num;
 
+mod error;
 mod node;
 mod prefix;
 mod set;
