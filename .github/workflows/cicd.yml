@@ -133,8 +133,6 @@ jobs:
             args: --test integration
           - suite: property-fuzzing-tests
             args: --test hypothesis
-          - suite: documentation-tests
-            args: --doc
     steps:
       - name: checkout
         uses: actions/checkout@v2
