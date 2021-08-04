@@ -1,5 +1,10 @@
 # prefix-set-rs
 
+![Crates.io](https://img.shields.io/crates/v/prefixset)
+[![ci/cd](https://github.com/wolcomm/prefix-set-rs/actions/workflows/cicd.yml/badge.svg?event=push)](https://github.com/wolcomm/prefix-set-rs/actions/workflows/cicd.yml)
+[![codecov](https://codecov.io/gh/wolcomm/prefix-set-rs/branch/master/graph/badge.svg?token=9dktFtdydp)](https://codecov.io/gh/wolcomm/prefix-set-rs)
+![docs.rs](https://img.shields.io/docsrs/prefixset)
+
 ## About
 
 A Rust library crate `prefixset`, providing a set-like container for IP
