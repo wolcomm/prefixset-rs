@@ -53,6 +53,7 @@ jobs:
           - --lib
           - --test integration
           - --test hypothesis
+          - --test versions
           - --doc
     steps:
       - name: checkout
