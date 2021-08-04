@@ -3,13 +3,13 @@
 //!
 //! Sets of prefixes are stored in a binary radix tree structure that provides:
 //!
-//! - Fast insertion of contigious prefix ranges in a single traversal,
+//! - Fast insertion of contiguous prefix ranges in a single traversal,
 //! - Iteration over either prefixes or ranges of prefixes, and
 //! - Self aggregation on each operation.
 //!
 //! This is a Rust implementation derived in large part from the internal
 //! data-structure used in the widely used [`bgpq3`] tool by Alexandre Snarskii,
-//! packaged as a library, and with the set-theorectic operations added.
+//! packaged as a library, and with set-theoretic operations added.
 //!
 //! # Quickstart
 //!
