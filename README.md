@@ -1,4 +1,4 @@
-# prefix-set-rs
+# prefixset-rs
 
 [![Crates.io](https://img.shields.io/crates/v/prefixset)](https://crates.io/crates/prefixset)
 [![ci/cd](https://github.com/wolcomm/prefix-set-rs/actions/workflows/cicd.yml/badge.svg?event=push)](https://github.com/wolcomm/prefix-set-rs/actions/workflows/cicd.yml)
