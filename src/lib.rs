@@ -39,7 +39,7 @@
 //!
 //! [`bgpq3`]: https://github.com/snar/bgpq3
 //!
-#![doc(html_root_url = "https://docs.rs/prefixset/0.1.0")]
+#![doc(html_root_url = "https://docs.rs/prefixset/0.1.0-rc.1")]
 #![warn(missing_docs)]
 
 extern crate ipnet;
