@@ -1,7 +1,8 @@
+use std::convert::TryFrom;
 use std::fmt;
 use std::str::FromStr;
 
-use ipnet::{Ipv6Net, PrefixLenError};
+use ipnet::{IpNet, Ipv6Net, PrefixLenError};
 
 use crate::error::{Error, Result};
 
@@ -42,6 +43,18 @@ impl FromStr for Ipv6Prefix {
 
     fn from_str(s: &str) -> Result<Self> {
         Ok(s.parse::<Ipv6Net>()?.into())
+    }
+}
+
+impl TryFrom<IpNet> for Ipv6Prefix {
+    type Error = Error;
+
+    fn try_from(n: IpNet) -> Result<Self> {
+        if let IpNet::V6(ipnet) = n {
+            Ok(ipnet.into())
+        } else {
+            Err(Error::AddressFamiltMismatch)
+        }
     }
 }
 

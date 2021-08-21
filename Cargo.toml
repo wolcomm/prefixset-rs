@@ -1,6 +1,6 @@
 [package]
 name = "prefixset"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 authors = ["Ben Maddison <benm@workonline.africa>"]
 description = "An efficient set container for IP address prefixes"
 edition = "2018"

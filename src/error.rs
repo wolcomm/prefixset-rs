@@ -15,6 +15,8 @@ pub enum Error {
         /// The error returned during parsing, if any.
         source: Option<ParseIntError>,
     },
+    /// Incompatible address families.
+    AddressFamiltMismatch,
 }
 
 impl std::error::Error for Error {
@@ -34,6 +36,7 @@ impl fmt::Display for Error {
             Self::AddrParse(ref err) => err.fmt(f),
             Self::PrefixLen(ref err) => err.fmt(f),
             Self::RangeParse { .. } => f.write_str("invalid IP prefix range"),
+            Self::AddressFamiltMismatch => f.write_str("mismatched address families"),
         }
     }
 }
