@@ -1,6 +1,15 @@
-use num::{One, Zero};
+use ip::{
+    concrete::{Netmask, PrefixOrdering},
+    traits::{Address as _, Prefix as _, PrefixLength as _},
+    Afi, Prefix,
+};
 
 use crate::prefix::{Comparison, IpPrefix};
+
+mod from;
+mod gluemap;
+mod iter;
+mod ops;
 
 use self::gluemap::GlueMap;
 pub use self::iter::{Children, Ranges};
@@ -11,15 +20,21 @@ enum Direction {
 }
 
 #[derive(Clone, Debug)]
-pub struct Node<P: IpPrefix> {
-    prefix: P,
-    gluemap: GlueMap<P>,
-    left: Option<Box<Node<P>>>,
-    right: Option<Box<Node<P>>>,
+pub struct Node<A: Afi>
+where
+    A::Primitive: std::fmt::Binary + ip::traits::primitive::Address<A, Length = u8>,
+{
+    prefix: Prefix<A>,
+    gluemap: GlueMap<A>,
+    left: Option<Box<Node<A>>>,
+    right: Option<Box<Node<A>>>,
 }
 
-impl<P: IpPrefix> Node<P> {
-    fn new(prefix: P, gluemap: GlueMap<P>) -> Self {
+impl<A: Afi> Node<A>
+where
+    A::Primitive: std::fmt::Binary + ip::traits::primitive::Address<A, Length = u8>,
+{
+    fn new(prefix: Prefix<A>, gluemap: GlueMap<A>) -> Self {
         Node {
             prefix,
             gluemap,
@@ -28,13 +43,21 @@ impl<P: IpPrefix> Node<P> {
         }
     }
 
-    pub fn prefix(&self) -> &P {
+    fn new_glue(prefix: Prefix<A>) -> Self {
+        Self::new(prefix, GlueMap::ZERO)
+    }
+
+    fn boxed(self) -> Box<Self> {
+        Box::new(self)
+    }
+
+    pub fn prefix(&self) -> &Prefix<A> {
         &self.prefix
     }
 
     pub fn add(mut self: Box<Self>, mut other: Box<Self>) -> Box<Self> {
-        match self.prefix().compare_with(other.prefix()) {
-            Comparison::Equal => {
+        match self.prefix().compare(other.prefix()) {
+            PrefixOrdering::Equal => {
                 self.gluemap |= other.gluemap;
                 if let Some(child) = other.left {
                     self = self.add(child);
@@ -44,10 +67,10 @@ impl<P: IpPrefix> Node<P> {
                 }
                 self
             }
-            Comparison::Subprefix(common) => {
+            PrefixOrdering::Subprefix(common) => {
                 // mask glue map for prefix lengths already present
                 other.gluemap &= !self.gluemap;
-                match other.branch_direction(common) {
+                match other.branch_direction(&common) {
                     Direction::Left => {
                         if let Some(child) = self.left {
                             let new_child = child.add(other);
@@ -67,9 +90,9 @@ impl<P: IpPrefix> Node<P> {
                 };
                 self
             }
-            Comparison::Superprefix(common) => {
+            PrefixOrdering::Superprefix(common) => {
                 self.gluemap &= !other.gluemap;
-                match self.branch_direction(common) {
+                match self.branch_direction(&common) {
                     Direction::Left => {
                         if let Some(child) = other.left {
                             let new_child = child.add(self);
@@ -89,11 +112,10 @@ impl<P: IpPrefix> Node<P> {
                 };
                 other
             }
-            Comparison::Divergent(common) => {
+            PrefixOrdering::Divergent(common) => {
                 // unwrap is safe here because common < P::MAX_LENGTH
-                let glue_prefix = self.prefix.new_from(common).unwrap();
-                let mut glue = Box::new(Self::new(glue_prefix, GlueMap::zero()));
-                match self.branch_direction(common) {
+                let mut glue = Self::new_glue(common).boxed();
+                match self.branch_direction(&common) {
                     Direction::Left => {
                         glue.left = Some(self);
                         glue.right = Some(other);
@@ -115,8 +137,8 @@ impl<P: IpPrefix> Node<P> {
         if let Some(mut child) = other.right.take() {
             self = self.remove(&mut child);
         }
-        match self.prefix().compare_with(other.prefix()) {
-            Comparison::Superprefix(_) | Comparison::Equal => {
+        match self.prefix().compare(other.prefix()) {
+            PrefixOrdering::Superprefix(_) | PrefixOrdering::Equal => {
                 // clear gluemap bits and recurse down
                 self.gluemap &= !other.gluemap;
                 if let Some(child) = self.left.take() {
@@ -126,9 +148,9 @@ impl<P: IpPrefix> Node<P> {
                     self.right = Some(child.remove(other));
                 };
             }
-            Comparison::Subprefix(common) => {
+            PrefixOrdering::Subprefix(common) => {
                 let deaggr_mask = self.gluemap & other.gluemap;
-                if deaggr_mask != GlueMap::zero() {
+                if deaggr_mask != GlueMap::ZERO {
                     // deaggregate matching subprefixes before recursing
                     self.gluemap &= !deaggr_mask;
                     self = self
@@ -137,7 +159,7 @@ impl<P: IpPrefix> Node<P> {
                         .map(|p| Box::new(Self::new(p, deaggr_mask)))
                         .fold(self, |this, n| this.add(n));
                 }
-                match other.branch_direction(common) {
+                match other.branch_direction(&common) {
                     Direction::Left => {
                         if let Some(child) = self.left.take() {
                             self.left = Some(child.remove(other));
@@ -155,10 +177,10 @@ impl<P: IpPrefix> Node<P> {
         self
     }
 
-    pub fn aggregate(mut self: Box<Self>, mut mask: Option<GlueMap<P>>) -> Option<Box<Self>> {
+    pub fn aggregate(mut self: Box<Self>, mut mask: Option<GlueMap<A>>) -> Option<Box<Self>> {
         // set mask to zero if None given
         if mask.is_none() {
-            mask = Some(GlueMap::zero())
+            mask = Some(GlueMap::ZERO)
         }
         // mask is the union of gluemaps of all parent nodes.
         // if the intersection of mask and self.gluemap is not zero
@@ -179,9 +201,14 @@ impl<P: IpPrefix> Node<P> {
         // length == self.prefix.length() + 1, then any bits set in both
         // child gluemaps can be aggregated into self.gluemap.
         //
-        let aggr_length = self.prefix().length() + 1;
-        let did_aggr = if let (Some(l), Some(r)) = (&mut self.left, &mut self.right) {
-            if l.prefix().length() == aggr_length && r.prefix().length() == aggr_length {
+        match (
+            self.prefix().length().increment(),
+            &mut self.right,
+            &mut self.left,
+        ) {
+            (Ok(len), Some(l), Some(r))
+                if l.prefix().length() == len && r.prefix().length() == len =>
+            {
                 // get the bits set in both child gluemaps
                 let aggr_bits = l.gluemap & r.gluemap;
                 // unset the bits in each child gluemap
@@ -189,32 +216,60 @@ impl<P: IpPrefix> Node<P> {
                 r.gluemap &= !aggr_bits;
                 // set them in self.gluemap
                 self.gluemap |= aggr_bits;
-                // indicate whether any aggregation occured
-                aggr_bits != GlueMap::zero()
-            } else {
-                false
+                // check whether any aggregation occured
+                if aggr_bits != GlueMap::ZERO {
+                    // left or right may now be unnecessary glue.
+                    // also, since some aggregation into self.gluemap occured, self
+                    // cannot be a glue node.
+                    if let Some(child) = self.left.take() {
+                        self.left = child.clean();
+                    };
+                    if let Some(child) = self.right.take() {
+                        self.right = child.clean();
+                    };
+                    Some(self)
+                } else {
+                    self.clean()
+                }
             }
-        } else {
-            false
-        };
+            _ => self.clean(),
+        }
+        // let aggr_length = self.prefix().length().increment();
+        // let did_aggr = if let (Some(l), Some(r)) = (&mut self.left, &mut self.right) {
+        //     if l.prefix().length() == aggr_length && r.prefix().length() == aggr_length {
+        //         // get the bits set in both child gluemaps
+        //         let aggr_bits = l.gluemap & r.gluemap;
+        //         // unset the bits in each child gluemap
+        //         l.gluemap &= !aggr_bits;
+        //         r.gluemap &= !aggr_bits;
+        //         // set them in self.gluemap
+        //         self.gluemap |= aggr_bits;
+        //         // indicate whether any aggregation occured
+        //         aggr_bits != GlueMap::ZERO
+        //     } else {
+        //         false
+        //     }
+        // } else {
+        //     false
+        // };
         // if aggregation occured, left or right may now be unnecessary glue.
         // also, since some aggregation into self.gluemap occured, self
         // cannot be a glue node.
-        if did_aggr {
-            if let Some(child) = self.left.take() {
-                self.left = child.clean();
-            };
-            if let Some(child) = self.right.take() {
-                self.right = child.clean();
-            };
-            Some(self)
-        } else {
-            self.clean()
-        }
+        // if did_aggr {
+        //     if let Some(child) = self.left.take() {
+        //         self.left = child.clean();
+        //     };
+        //     if let Some(child) = self.right.take() {
+        //         self.right = child.clean();
+        //     };
+        //     Some(self)
+        // } else {
+        //     self.clean()
+        // }
     }
 
     fn clean(self: Box<Self>) -> Option<Box<Self>> {
-        if self.gluemap == GlueMap::zero() {
+        if self.gluemap == GlueMap::ZERO {
             match (&self.left, &self.right) {
                 (None, None) => None,
                 (Some(_), None) => self.left,
@@ -227,13 +282,13 @@ impl<P: IpPrefix> Node<P> {
     }
 
     pub fn search(&self, qnode: &Self) -> Option<&Self> {
-        match self.prefix().compare_with(qnode.prefix()) {
-            Comparison::Equal | Comparison::Subprefix(_)
+        match self.prefix().compare(qnode.prefix()) {
+            PrefixOrdering::Equal | PrefixOrdering::Subprefix(_)
                 if self.gluemap & qnode.gluemap == qnode.gluemap =>
             {
                 Some(self)
             }
-            Comparison::Subprefix(common) => match qnode.branch_direction(common) {
+            PrefixOrdering::Subprefix(common) => match qnode.branch_direction(&common) {
                 Direction::Left => {
                     if let Some(child) = &self.left {
                         child.search(qnode)
@@ -254,10 +309,10 @@ impl<P: IpPrefix> Node<P> {
     }
 
     fn intersect_nodes(&self, qnode: &Self) -> Option<Box<Self>> {
-        match self.prefix().compare_with(qnode.prefix()) {
-            Comparison::Divergent(_) => None,
+        match self.prefix().compare(qnode.prefix()) {
+            PrefixOrdering::Divergent(_) => None,
             cmp => {
-                let prefix = if let Comparison::Subprefix(_) = cmp {
+                let prefix = if let PrefixOrdering::Subprefix(_) = cmp {
                     qnode.prefix().to_owned()
                 } else {
                     self.prefix().to_owned()
@@ -278,17 +333,20 @@ impl<P: IpPrefix> Node<P> {
         }
     }
 
-    fn branch_direction(&self, bit_index: u8) -> Direction {
-        let next_index = bit_index + 1;
-        let mask = P::Bits::one() << (P::MAX_LENGTH - next_index);
-        if self.prefix.bits() & mask == P::Bits::zero() {
+    fn branch_direction(&self, from: &Prefix<A>) -> Direction {
+        let mask = Netmask::from(
+            from.length()
+                .increment()
+                .expect("expected non-maximal prefix-length"),
+        );
+        if (self.prefix().network() & mask).is_unspecified() {
             Direction::Left
         } else {
             Direction::Right
         }
     }
 
-    pub fn ranges(&self) -> Ranges<P> {
+    pub fn ranges(&self) -> Ranges<A> {
         self.into()
     }
 
@@ -297,11 +355,6 @@ impl<P: IpPrefix> Node<P> {
         self.into()
     }
 }
-
-mod from;
-mod gluemap;
-mod iter;
-mod ops;
 
 #[cfg(test)]
 mod tests;

@@ -42,9 +42,6 @@
 #![doc(html_root_url = "https://docs.rs/prefixset/0.1.0-rc.2")]
 #![warn(missing_docs)]
 
-extern crate ipnet;
-extern crate num;
-
 pub mod prefix;
 pub mod set;
 
