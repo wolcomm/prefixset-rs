@@ -1,16 +1,16 @@
 use std::ops::{BitAnd, BitOr, Sub};
 
-use crate::prefix::IpPrefix;
+use ip::Afi;
 
 use super::Node;
 
-impl<P: IpPrefix> PartialEq for Node<P> {
+impl<A: Afi> PartialEq for Node<A> {
     fn eq(&self, other: &Self) -> bool {
         self.prefix == other.prefix && self.gluemap == other.gluemap
     }
 }
 
-impl<P: IpPrefix> BitAnd for Box<Node<P>> {
+impl<A: Afi> BitAnd for Box<Node<A>> {
     type Output = Option<Self>;
 
     fn bitand(self, rhs: Self) -> Self::Output {
@@ -28,7 +28,7 @@ impl<P: IpPrefix> BitAnd for Box<Node<P>> {
     }
 }
 
-impl<P: IpPrefix> BitOr for Box<Node<P>> {
+impl<A: Afi> BitOr for Box<Node<A>> {
     type Output = Option<Self>;
 
     fn bitor(self, rhs: Self) -> Self::Output {
@@ -36,7 +36,7 @@ impl<P: IpPrefix> BitOr for Box<Node<P>> {
     }
 }
 
-impl<P: IpPrefix> Sub for Box<Node<P>> {
+impl<A: Afi> Sub for Box<Node<A>> {
     type Output = Option<Self>;
 
     fn sub(self, mut rhs: Self) -> Self::Output {

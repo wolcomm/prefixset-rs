@@ -1,108 +1,40 @@
 use std::collections::HashSet;
 use std::iter::FromIterator;
-use std::ops::Deref;
 
+use ip::{Afi, Ipv4, Ipv6, Prefix};
 use itertools::Itertools;
-use num::PrimInt;
-use proptest::{
-    arbitrary::{ParamsFor, StrategyFor},
-    prelude::*,
-};
+use proptest::{arbitrary::ParamsFor, prelude::*};
 
-use prefixset::{IpPrefix, Ipv4Prefix, Ipv6Prefix, PrefixSet};
-
-#[derive(Clone, Copy, Debug)]
-struct TestPrefix<P: IpPrefix>(P);
-
-impl<P: IpPrefix> Deref for TestPrefix<P> {
-    type Target = P;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<P> Arbitrary for TestPrefix<P>
-where
-    P: IpPrefix,
-    P::Bits: Arbitrary,
-    StrategyFor<P::Bits>: 'static,
-{
-    type Parameters = ParamsFor<P::Bits>;
-    type Strategy = BoxedStrategy<Self>;
-
-    fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
-        any_with::<P::Bits>(args)
-            .prop_flat_map(|bits| {
-                let min_length = P::MAX_LENGTH - bits.trailing_zeros() as u8;
-                (Just(bits), min_length..=P::MAX_LENGTH)
-                    .prop_map(|(addr, length)| TestPrefix(P::new(addr, length).unwrap()))
-            })
-            .boxed()
-    }
-}
+use prefixset::PrefixSet;
 
 #[derive(Clone, Debug)]
-struct TestPrefixSet<P: IpPrefix> {
-    ps: PrefixSet<P>,
-    cs: HashSet<P>,
+struct TestPrefixSet<A: Afi> {
+    ps: PrefixSet<A>,
+    cs: HashSet<Prefix<A>>,
 }
 
-impl<'a, P: IpPrefix + 'a> FromIterator<&'a TestPrefix<P>> for TestPrefixSet<P> {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = &'a TestPrefix<P>>,
-    {
+impl<A: Afi> FromIterator<Prefix<A>> for TestPrefixSet<A> {
+    fn from_iter<T: IntoIterator<Item = Prefix<A>>>(iter: T) -> Self {
         let (ps_iter, cs_iter) = iter.into_iter().tee();
-        let ps = ps_iter.into_iter().map(|p| &**p).collect();
-        let cs = cs_iter.into_iter().map(|p| **p).collect();
-        Self { ps, cs }
+        // let ps = ps_iter.into_iter().map(|p| &**p).collect();
+        // let cs = cs_iter.into_iter().map(|p| **p).collect();
+        Self {
+            ps: ps_iter.collect(),
+            cs: cs_iter.collect(),
+        }
     }
 }
 
-#[derive(Clone)]
-struct TestPrefixSetParams<P>(ParamsFor<Vec<TestPrefix<P>>>)
+impl<A: Afi> Arbitrary for TestPrefixSet<A>
 where
-    P: IpPrefix,
-    TestPrefix<P>: Arbitrary,
-    ParamsFor<TestPrefix<P>>: Clone;
-
-impl<P> Default for TestPrefixSetParams<P>
-where
-    P: IpPrefix,
-    TestPrefix<P>: Arbitrary,
-    ParamsFor<TestPrefix<P>>: Clone,
+    Prefix<A>: Arbitrary,
 {
-    fn default() -> Self {
-        Self(((500..2000usize).into(), Default::default()))
-    }
-}
-
-impl<P> Deref for TestPrefixSetParams<P>
-where
-    P: IpPrefix,
-    TestPrefix<P>: Arbitrary,
-    ParamsFor<TestPrefix<P>>: Clone,
-{
-    type Target = ParamsFor<Vec<TestPrefix<P>>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<P> Arbitrary for TestPrefixSet<P>
-where
-    P: IpPrefix + 'static,
-    TestPrefix<P>: Arbitrary,
-    ParamsFor<TestPrefix<P>>: Clone,
-{
-    type Parameters = TestPrefixSetParams<P>;
+    type Parameters = ParamsFor<Vec<Prefix<A>>>;
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
-        any_with::<Vec<TestPrefix<P>>>((*args).clone())
-            .prop_map(|v| v.iter().collect())
+        any_with::<Vec<Prefix<A>>>(args)
+            .prop_map(TestPrefixSet::from_iter)
             .boxed()
     }
 }
@@ -131,7 +63,7 @@ macro_rules! property_tests {
                         prop_assert!(
                             s.cs.to_owned()
                                 .into_iter()
-                                .all(|p| s.ps.contains(&p))
+                                .all(|p| s.ps.contains(p))
                         );
                     }
 
@@ -223,6 +155,6 @@ macro_rules! property_tests {
 }
 
 property_tests! {
-    ipv4 => Ipv4Prefix,
-    ipv6 => Ipv6Prefix,
+    ipv4 => Ipv4,
+    ipv6 => Ipv6,
 }

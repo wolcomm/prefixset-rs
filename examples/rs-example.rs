@@ -1,8 +1,10 @@
 use std::error::Error;
 
-use prefixset::{Ipv4Prefix, PrefixSet};
+use ip::{Ipv4, Prefix};
 
-/// Collect a `Vec<&str>` into a `PrefixSet<Ipv4Prefix>` and
+use prefixset::PrefixSet;
+
+/// Collect a `Vec<&str>` into a `PrefixSet<Ipv4>` and
 /// print the contained ranges.
 ///
 /// # Comparison with `bgpq3`
@@ -44,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         "192.0.2.224/27",
     ]
     .into_iter()
-    .map(|prefix| prefix.parse::<Ipv4Prefix>())
+    .map(|prefix| prefix.parse::<Prefix<Ipv4>>())
     .collect::<Result<_, _>>()?;
     set.ranges().for_each(|range| println!("{}", range));
     Ok(())

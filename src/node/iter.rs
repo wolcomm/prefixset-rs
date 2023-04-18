@@ -1,29 +1,19 @@
-use std::convert::TryInto;
+use ip::{
+    concrete::{PrefixLength, PrefixRange},
+    traits::PrefixLength as _,
+    Afi,
+};
 
-use num::Zero;
-
-use crate::prefix::{IpPrefix, IpPrefixRange};
-
-use super::{GlueMap, Node};
-
-impl<'a, P: IpPrefix> IntoIterator for &'a Box<Node<P>> {
-    type Item = &'a Box<Node<P>>;
-    type IntoIter = Children<'a, P>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.into()
-    }
-}
+use super::Node;
 
 #[derive(Debug)]
-#[allow(clippy::borrowed_box)]
-pub struct Children<'a, P: IpPrefix> {
-    this: Option<&'a Box<Node<P>>>,
-    parent: Option<Box<Children<'a, P>>>,
-    children: Vec<Option<&'a Box<Node<P>>>>,
+pub struct Children<'a, A: Afi> {
+    this: Option<&'a Node<A>>,
+    parent: Option<Box<Children<'a, A>>>,
+    children: Vec<Option<&'a Node<A>>>,
 }
 
-impl<P: IpPrefix> Default for Children<'_, P> {
+impl<A: Afi> Default for Children<'_, A> {
     fn default() -> Self {
         Self {
             this: None,
@@ -33,18 +23,18 @@ impl<P: IpPrefix> Default for Children<'_, P> {
     }
 }
 
-impl<'a, P: IpPrefix> From<&'a Box<Node<P>>> for Children<'a, P> {
-    fn from(node: &'a Box<Node<P>>) -> Self {
+impl<'a, A: Afi> From<&'a Node<A>> for Children<'a, A> {
+    fn from(node: &'a Node<A>) -> Self {
         Self {
             this: Some(node),
             parent: None,
-            children: [node.left.as_ref(), node.right.as_ref()].into(),
+            children: [node.left.as_deref(), node.right.as_deref()].into(),
         }
     }
 }
 
-impl<'a, P: IpPrefix> Iterator for Children<'a, P> {
-    type Item = &'a Box<Node<P>>;
+impl<'a, A: Afi> Iterator for Children<'a, A> {
+    type Item = &'a Node<A>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(this) = self.this.take() {
@@ -52,9 +42,9 @@ impl<'a, P: IpPrefix> Iterator for Children<'a, P> {
         }
         while let Some(maybe_child) = self.children.pop() {
             if let Some(child) = maybe_child {
-                // construct new NodeTreeIter as self, with current self as
-                // parent, and recurse child
-                let mut child_iter = child.into_iter();
+                // construct new Children iterator from `child` replacing self,
+                // with current self as parent, and recurse over it
+                let mut child_iter = child.children();
                 child_iter.parent = Some(Box::new(std::mem::take(self)));
                 *self = child_iter;
                 return self.next();
@@ -71,43 +61,28 @@ impl<'a, P: IpPrefix> Iterator for Children<'a, P> {
 }
 
 #[derive(Debug)]
-pub struct Ranges<'a, P: IpPrefix> {
-    this: &'a Node<P>,
-    map: GlueMap<P>,
-    last: u8,
+pub struct Ranges<'a, A: Afi> {
+    this: &'a Node<A>,
+    next_length: Option<PrefixLength<A>>,
 }
 
-impl<'a, P: IpPrefix> From<&'a Node<P>> for Ranges<'a, P> {
-    fn from(node: &'a Node<P>) -> Self {
+impl<'a, A: Afi> From<&'a Node<A>> for Ranges<'a, A> {
+    fn from(node: &'a Node<A>) -> Self {
         Self {
             this: node,
-            map: node.gluemap.to_owned(),
-            last: 0,
+            next_length: Some(PrefixLength::MIN),
         }
     }
 }
 
-impl<'a, P: IpPrefix> Iterator for Ranges<'a, P> {
-    type Item = IpPrefixRange<P>;
+impl<'a, A: Afi> Iterator for Ranges<'a, A> {
+    type Item = PrefixRange<A>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.map != GlueMap::zero() {
-            // unwrap is safe here as long as our address family
-            // is 255 bits long or less
-            let right_zeros: u8 = self.map.trailing_zeros().try_into().unwrap();
-            let lower = self.last + right_zeros;
-            self.map >>= right_zeros;
-            // unwrap is safe here as long as our address family
-            // is 255 bits long or less
-            let right_ones: u8 = (!self.map).trailing_zeros().try_into().unwrap();
-            let upper = lower + right_ones - 1;
-            self.map >>= right_ones;
-            self.last = upper + 1;
-            // unwrap is safe here as long as self.map doesn't have any
-            // bits set lower than self.this.prefix.length()
-            Some(IpPrefixRange::new(self.this.prefix.to_owned(), lower, upper).unwrap())
-        } else {
-            None
-        }
+        let range = self.this.gluemap.next_range(self.next_length?)?;
+        self.next_length = range.end().increment().ok();
+        // unwrap is safe here as long as self.map doesn't have any
+        // bits set lower than self.this.prefix.length()
+        Some(PrefixRange::new(self.this.prefix, range).unwrap())
     }
 }

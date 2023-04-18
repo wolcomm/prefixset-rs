@@ -1,10 +1,8 @@
 use ip::{
-    concrete::{Netmask, PrefixOrdering},
+    concrete::{Hostmask, Netmask, PrefixOrdering},
     traits::{Address as _, Prefix as _, PrefixLength as _},
     Afi, Prefix,
 };
-
-use crate::prefix::{Comparison, IpPrefix};
 
 mod from;
 mod gluemap;
@@ -20,20 +18,14 @@ enum Direction {
 }
 
 #[derive(Clone, Debug)]
-pub struct Node<A: Afi>
-where
-    A::Primitive: std::fmt::Binary + ip::traits::primitive::Address<A, Length = u8>,
-{
+pub struct Node<A: Afi> {
     prefix: Prefix<A>,
     gluemap: GlueMap<A>,
     left: Option<Box<Node<A>>>,
     right: Option<Box<Node<A>>>,
 }
 
-impl<A: Afi> Node<A>
-where
-    A::Primitive: std::fmt::Binary + ip::traits::primitive::Address<A, Length = u8>,
-{
+impl<A: Afi> Node<A> {
     fn new(prefix: Prefix<A>, gluemap: GlueMap<A>) -> Self {
         Node {
             prefix,
@@ -47,12 +39,16 @@ where
         Self::new(prefix, GlueMap::ZERO)
     }
 
-    fn boxed(self) -> Box<Self> {
+    pub fn boxed(self) -> Box<Self> {
         Box::new(self)
     }
 
     pub fn prefix(&self) -> &Prefix<A> {
         &self.prefix
+    }
+
+    pub fn is_glue(&self) -> bool {
+        self.gluemap == GlueMap::ZERO
     }
 
     pub fn add(mut self: Box<Self>, mut other: Box<Self>) -> Box<Self> {
@@ -155,7 +151,8 @@ where
                     self.gluemap &= !deaggr_mask;
                     self = self
                         .prefix
-                        .into_subprefixes(other.prefix.length())
+                        .subprefixes(other.prefix.length())
+                        .unwrap() // safe because `other` is a subprefix of `self`.
                         .map(|p| Box::new(Self::new(p, deaggr_mask)))
                         .fold(self, |this, n| this.add(n));
                 }
@@ -234,38 +231,6 @@ where
             }
             _ => self.clean(),
         }
-        // let aggr_length = self.prefix().length().increment();
-        // let did_aggr = if let (Some(l), Some(r)) = (&mut self.left, &mut self.right) {
-        //     if l.prefix().length() == aggr_length && r.prefix().length() == aggr_length {
-        //         // get the bits set in both child gluemaps
-        //         let aggr_bits = l.gluemap & r.gluemap;
-        //         // unset the bits in each child gluemap
-        //         l.gluemap &= !aggr_bits;
-        //         r.gluemap &= !aggr_bits;
-        //         // set them in self.gluemap
-        //         self.gluemap |= aggr_bits;
-        //         // indicate whether any aggregation occured
-        //         aggr_bits != GlueMap::ZERO
-        //     } else {
-        //         false
-        //     }
-        // } else {
-        //     false
-        // };
-        // if aggregation occured, left or right may now be unnecessary glue.
-        // also, since some aggregation into self.gluemap occured, self
-        // cannot be a glue node.
-        // if did_aggr {
-        //     if let Some(child) = self.left.take() {
-        //         self.left = child.clean();
-        //     };
-        //     if let Some(child) = self.right.take() {
-        //         self.right = child.clean();
-        //     };
-        //     Some(self)
-        // } else {
-        //     self.clean()
-        // }
     }
 
     fn clean(self: Box<Self>) -> Option<Box<Self>> {
@@ -334,11 +299,13 @@ where
     }
 
     fn branch_direction(&self, from: &Prefix<A>) -> Direction {
-        let mask = Netmask::from(
-            from.length()
-                .increment()
-                .expect("expected non-maximal prefix-length"),
-        );
+        let mask = Hostmask::from(from.length())
+            & Netmask::from(
+                from.length()
+                    .increment()
+                    // ok to unwrap, because `from.length() < MAX_LENGTH`.
+                    .unwrap(),
+            );
         if (self.prefix().network() & mask).is_unspecified() {
             Direction::Left
         } else {
@@ -350,8 +317,7 @@ where
         self.into()
     }
 
-    #[allow(clippy::needless_lifetimes, clippy::borrowed_box)]
-    pub fn children<'a>(self: &'a Box<Self>) -> Children<'a, P> {
+    pub fn children(&self) -> Children<'_, A> {
         self.into()
     }
 }

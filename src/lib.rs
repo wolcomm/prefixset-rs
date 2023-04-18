@@ -14,8 +14,9 @@
 //! # Quickstart
 //!
 //! ``` rust
-//! extern crate prefixset;
-//! use prefixset::{Error, Ipv6Prefix, IpPrefixRange, PrefixSet};
+//! use ip::{Ipv6, Prefix, PrefixLength, PrefixRange};
+//!
+//! use prefixset::{Error, PrefixSet};
 //!
 //! fn main() -> Result<(), Error> {
 //!     
@@ -25,12 +26,13 @@
 //!             "2001:db8:f00::/37",
 //!         ]
 //!         .iter()
-//!         .map(|s| s.parse::<Ipv6Prefix>())
+//!         .map(|s| s.parse::<Prefix<Ipv6>>())
 //!         .collect::<Result<PrefixSet<_>, _>>()?;
 //!
 //!     // create a range by parsing a &str and providing the lower
 //!     // and upper prefix lenth bounds
-//!     let range = IpPrefixRange::new("2001:db8::/36".parse()?, 37, 37)?;
+//!     let length = PrefixLength::<Ipv6>::from_primitive(37)?;
+//!     let range = PrefixRange::<Ipv6>::new("2001:db8::/36".parse()?, length..=length)?;
 //!
 //!     assert_eq!(set.ranges().collect::<Vec<_>>(), vec![range]);
 //!     Ok(())
@@ -42,7 +44,6 @@
 #![doc(html_root_url = "https://docs.rs/prefixset/0.1.0-rc.2")]
 #![warn(missing_docs)]
 
-pub mod prefix;
 pub mod set;
 
 mod error;
@@ -52,7 +53,5 @@ mod node;
 mod tests;
 
 pub use crate::error::Error;
-#[doc(inline)]
-pub use crate::prefix::{IpPrefix, IpPrefixRange, Ipv4Prefix, Ipv6Prefix};
 #[doc(inline)]
 pub use crate::set::PrefixSet;

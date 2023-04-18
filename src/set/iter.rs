@@ -1,17 +1,18 @@
+use ip::{Afi, PrefixRange};
+
 use crate::node;
-use crate::prefix::{self, IpPrefix};
 
 use super::PrefixSet;
 
-/// Non-consuming iterator returned by [`PrefixSet<P>::ranges()`].
+/// Non-consuming iterator returned by [`PrefixSet<A>::ranges()`].
 #[derive(Debug)]
-pub struct Ranges<'a, P: IpPrefix> {
-    tree_iter: Option<node::Children<'a, P>>,
-    ranges_iter: Option<node::Ranges<'a, P>>,
+pub struct Ranges<'a, A: Afi> {
+    tree_iter: Option<node::Children<'a, A>>,
+    ranges_iter: Option<node::Ranges<'a, A>>,
 }
 
-impl<'a, P: IpPrefix> From<&'a PrefixSet<P>> for Ranges<'a, P> {
-    fn from(s: &'a PrefixSet<P>) -> Self {
+impl<'a, A: Afi> From<&'a PrefixSet<A>> for Ranges<'a, A> {
+    fn from(s: &'a PrefixSet<A>) -> Self {
         Self {
             tree_iter: s.root.as_ref().map(|root| root.children()),
             ranges_iter: None,
@@ -19,8 +20,8 @@ impl<'a, P: IpPrefix> From<&'a PrefixSet<P>> for Ranges<'a, P> {
     }
 }
 
-impl<'a, P: IpPrefix> Iterator for Ranges<'a, P> {
-    type Item = <node::Ranges<'a, P> as Iterator>::Item;
+impl<'a, A: Afi> Iterator for Ranges<'a, A> {
+    type Item = <node::Ranges<'a, A> as Iterator>::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -42,15 +43,15 @@ impl<'a, P: IpPrefix> Iterator for Ranges<'a, P> {
     }
 }
 
-/// Non-consuming iterator returned by [`PrefixSet<P>::prefixes()`].
+/// Non-consuming iterator returned by [`PrefixSet<A>::prefixes()`].
 #[derive(Debug)]
-pub struct Prefixes<'a, P: IpPrefix> {
-    ranges_iter: Ranges<'a, P>,
-    prefix_range_iter: Option<prefix::range::IntoIter<P>>,
+pub struct Prefixes<'a, A: Afi> {
+    ranges_iter: Ranges<'a, A>,
+    prefix_range_iter: Option<<PrefixRange<A> as IntoIterator>::IntoIter>,
 }
 
-impl<'a, P: IpPrefix> From<&'a PrefixSet<P>> for Prefixes<'a, P> {
-    fn from(s: &'a PrefixSet<P>) -> Self {
+impl<'a, A: Afi> From<&'a PrefixSet<A>> for Prefixes<'a, A> {
+    fn from(s: &'a PrefixSet<A>) -> Self {
         Self {
             ranges_iter: s.into(),
             prefix_range_iter: None,
@@ -58,8 +59,8 @@ impl<'a, P: IpPrefix> From<&'a PrefixSet<P>> for Prefixes<'a, P> {
     }
 }
 
-impl<'a, P: IpPrefix> Iterator for Prefixes<'a, P> {
-    type Item = <prefix::range::IntoIter<P> as Iterator>::Item;
+impl<'a, A: Afi> Iterator for Prefixes<'a, A> {
+    type Item = <PrefixRange<A> as IntoIterator>::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {

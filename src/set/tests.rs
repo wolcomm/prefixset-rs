@@ -1,5 +1,7 @@
+use ip::{Ipv4, Prefix, PrefixRange};
+
 use crate::tests::TestResult;
-use crate::{IpPrefixRange, Ipv4Prefix};
+// use crate::{IpPrefixRange, Ipv4Prefix};
 
 use super::PrefixSet;
 
@@ -13,7 +15,7 @@ fn assert_sync<T: Sync>(_: T) -> TestResult {
 mod new_ipv4_prefix_set {
     use super::*;
 
-    fn setup() -> PrefixSet<Ipv4Prefix> {
+    fn setup() -> PrefixSet<Ipv4> {
         PrefixSet::new()
     }
 
@@ -40,10 +42,10 @@ mod new_ipv4_prefix_set {
     fn contains_no_prefixes() -> TestResult {
         let s = setup();
         assert_eq!(s.prefixes().count(), 0);
-        assert!(!s.contains(&"192.0.2.0/24".parse()?));
-        assert!(!s.contains(&"192.0.0.0/22".parse()?));
-        assert!(!s.contains(&"192.0.2.128/25".parse()?));
-        assert!(!s.contains(&"192.0.4.0/24".parse()?));
+        assert!(!s.contains("192.0.2.0/24".parse()?));
+        assert!(!s.contains("192.0.0.0/22".parse()?));
+        assert!(!s.contains("192.0.2.128/25".parse()?));
+        assert!(!s.contains("192.0.4.0/24".parse()?));
         Ok(())
     }
 
@@ -51,16 +53,16 @@ mod new_ipv4_prefix_set {
     fn iter_over_prefixes_is_empty() -> TestResult {
         let s = setup();
         let c: Vec<_> = s.prefixes().collect();
-        assert_eq!(Vec::<Ipv4Prefix>::new(), c);
+        assert_eq!(Vec::<Prefix<Ipv4>>::new(), c);
         Ok(())
     }
 
     mod with_a_prefix_added {
         use super::*;
 
-        fn setup() -> PrefixSet<Ipv4Prefix> {
+        fn setup() -> PrefixSet<Ipv4> {
             let mut s = super::setup();
-            let p: Ipv4Prefix = "192.0.2.0/24".parse().unwrap();
+            let p = "192.0.2.0/24".parse::<Prefix<Ipv4>>().unwrap();
             s.insert(p).to_owned()
         }
 
@@ -75,33 +77,33 @@ mod new_ipv4_prefix_set {
         #[test]
         fn contains_that_prefix() -> TestResult {
             let s = setup();
-            assert!(s.contains(&"192.0.2.0/24".parse()?));
+            assert!(s.contains("192.0.2.0/24".parse()?));
             Ok(())
         }
 
         #[test]
         fn does_not_contain_others() -> TestResult {
             let s = setup();
-            assert!(!s.contains(&"192.0.0.0/22".parse()?));
-            assert!(!s.contains(&"192.0.2.128/25".parse()?));
-            assert!(!s.contains(&"192.0.4.0/24".parse()?));
+            assert!(!s.contains("192.0.0.0/22".parse()?));
+            assert!(!s.contains("192.0.2.128/25".parse()?));
+            assert!(!s.contains("192.0.4.0/24".parse()?));
             Ok(())
         }
 
         #[test]
         fn iter_over_prefixes_is_singleton() -> TestResult {
             let s = setup();
-            let c: Vec<_> = s.prefixes().collect();
-            assert_eq!(vec!["192.0.2.0/24".parse::<Ipv4Prefix>()?], c);
+            let c: Vec<Prefix<Ipv4>> = s.prefixes().collect();
+            assert_eq!(vec!["192.0.2.0/24".parse::<Prefix<Ipv4>>()?], c);
             Ok(())
         }
 
         mod and_removed {
             use super::*;
 
-            fn setup() -> PrefixSet<Ipv4Prefix> {
+            fn setup() -> PrefixSet<Ipv4> {
                 let mut s = super::setup();
-                let p: Ipv4Prefix = "192.0.2.0/24".parse().unwrap();
+                let p = "192.0.2.0/24".parse::<Prefix<Ipv4>>().unwrap();
                 s.remove(p).to_owned()
             }
 
@@ -116,9 +118,9 @@ mod new_ipv4_prefix_set {
         mod with_another_prefix_added {
             use super::*;
 
-            fn setup() -> PrefixSet<Ipv4Prefix> {
+            fn setup() -> PrefixSet<Ipv4> {
                 let mut s = super::setup();
-                let p: Ipv4Prefix = "192.0.0.0/22".parse().unwrap();
+                let p = "192.0.0.0/22".parse::<Prefix<Ipv4>>().unwrap();
                 s.insert(p).to_owned()
             }
 
@@ -132,8 +134,8 @@ mod new_ipv4_prefix_set {
             #[test]
             fn contains_both_prefixes() -> TestResult {
                 let s = setup();
-                assert!(s.contains(&"192.0.2.0/24".parse()?));
-                assert!(s.contains(&"192.0.0.0/22".parse()?));
+                assert!(s.contains("192.0.2.0/24".parse()?));
+                assert!(s.contains("192.0.0.0/22".parse()?));
                 Ok(())
             }
 
@@ -143,8 +145,8 @@ mod new_ipv4_prefix_set {
                 let c: Vec<_> = s.prefixes().collect();
                 assert_eq!(
                     vec![
-                        "192.0.0.0/22".parse::<Ipv4Prefix>()?,
-                        "192.0.2.0/24".parse::<Ipv4Prefix>()?,
+                        "192.0.0.0/22".parse::<Prefix<Ipv4>>()?,
+                        "192.0.2.0/24".parse::<Prefix<Ipv4>>()?,
                     ],
                     c
                 );
@@ -154,16 +156,16 @@ mod new_ipv4_prefix_set {
             mod and_a_range_removed {
                 use super::*;
 
-                fn setup() -> PrefixSet<Ipv4Prefix> {
+                fn setup() -> PrefixSet<Ipv4> {
                     let mut s = super::setup();
-                    let r: IpPrefixRange<_> = "192.0.0.0/16,24,24".parse().unwrap();
+                    let r: PrefixRange<Ipv4> = "192.0.0.0/16,24,24".parse().unwrap();
                     s.remove(r).to_owned()
                 }
 
                 #[test]
                 fn contains_one_prefix() -> TestResult {
                     let s = setup();
-                    println!("{:#?}", s);
+                    dbg!(&s);
                     assert_eq!(s.prefixes().count(), 1);
                     Ok(())
                 }
@@ -171,7 +173,7 @@ mod new_ipv4_prefix_set {
                 #[test]
                 fn contains_the_remaining_prefix() -> TestResult {
                     let s = setup();
-                    assert!(&s.contains(&"192.0.0.0/22".parse()?));
+                    assert!(&s.contains("192.0.0.0/22".parse()?));
                     Ok(())
                 }
             }
@@ -179,9 +181,9 @@ mod new_ipv4_prefix_set {
             mod with_a_third_prefix_added {
                 use super::*;
 
-                fn setup() -> PrefixSet<Ipv4Prefix> {
+                fn setup() -> PrefixSet<Ipv4> {
                     let mut s = super::setup();
-                    let p: Ipv4Prefix = "192.0.3.0/24".parse().unwrap();
+                    let p: Prefix<Ipv4> = "192.0.3.0/24".parse().unwrap();
                     s.insert(p).to_owned()
                 }
 
@@ -203,9 +205,9 @@ mod new_ipv4_prefix_set {
                 fn contains_all_prefixes() -> TestResult {
                     let s = setup();
                     println!("{:#?}", s);
-                    assert!(s.contains(&"192.0.2.0/24".parse()?));
-                    assert!(s.contains(&"192.0.3.0/24".parse()?));
-                    assert!(s.contains(&"192.0.0.0/22".parse()?));
+                    assert!(s.contains("192.0.2.0/24".parse()?));
+                    assert!(s.contains("192.0.3.0/24".parse()?));
+                    assert!(s.contains("192.0.0.0/22".parse()?));
                     Ok(())
                 }
 
@@ -215,9 +217,9 @@ mod new_ipv4_prefix_set {
                     let c: Vec<_> = s.prefixes().collect();
                     assert_eq!(
                         vec![
-                            "192.0.0.0/22".parse::<Ipv4Prefix>()?,
-                            "192.0.2.0/24".parse::<Ipv4Prefix>()?,
-                            "192.0.3.0/24".parse::<Ipv4Prefix>()?,
+                            "192.0.0.0/22".parse::<Prefix<Ipv4>>()?,
+                            "192.0.2.0/24".parse::<Prefix<Ipv4>>()?,
+                            "192.0.3.0/24".parse::<Prefix<Ipv4>>()?,
                         ],
                         c
                     );
@@ -227,9 +229,9 @@ mod new_ipv4_prefix_set {
                 mod and_a_range_removed {
                     use super::*;
 
-                    fn setup() -> PrefixSet<Ipv4Prefix> {
+                    fn setup() -> PrefixSet<Ipv4> {
                         let mut s = super::setup();
-                        let r: IpPrefixRange<_> = "192.0.2.0/23,24,24".parse().unwrap();
+                        let r: PrefixRange<Ipv4> = "192.0.2.0/23,24,24".parse().unwrap();
                         s.remove(r).to_owned()
                     }
 
@@ -244,7 +246,7 @@ mod new_ipv4_prefix_set {
                     #[test]
                     fn contains_the_remaining_prefix() -> TestResult {
                         let s = setup();
-                        assert!(s.contains(&"192.0.0.0/22".parse()?));
+                        assert!(s.contains("192.0.0.0/22".parse()?));
                         Ok(())
                     }
                 }

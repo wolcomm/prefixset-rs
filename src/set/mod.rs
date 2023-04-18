@@ -1,11 +1,10 @@
-//! [`PrefixSet<P>`] and related types.
-use std::iter::IntoIterator;
+//! [`PrefixSet<A>`] and related types.
 use std::mem;
 
-use crate::node::Node;
-use crate::prefix::IpPrefix;
+use ip::{Afi, Prefix};
 
-mod from;
+use crate::node::Node;
+
 mod iter;
 mod ops;
 
@@ -17,31 +16,32 @@ pub use self::iter::{Prefixes, Ranges};
 /// Most mutating methods return `&mut Self` for easy chaining, e.g.:
 ///
 /// ``` rust
-/// # use prefixset::{Error, Ipv4Prefix, PrefixSet};
+/// # use ip::{Prefix, Ipv4};
+/// # use prefixset::{Error, PrefixSet};
 /// # fn main() -> Result<(), Error> {
 /// let set = PrefixSet::new()
-///     .insert("192.0.2.0/24".parse::<Ipv4Prefix>()?)
+///     .insert("192.0.2.0/24".parse::<Prefix<Ipv4>>()?)
 ///     .to_owned();
 /// assert_eq!(set.len(), 1);
 /// #     Ok(())
 /// # }
 /// ```
 #[derive(Clone, Debug)]
-pub struct PrefixSet<P: IpPrefix> {
-    root: Option<Box<Node<P>>>,
+pub struct PrefixSet<A: Afi> {
+    root: Option<Box<Node<A>>>,
 }
 
-impl<P: IpPrefix> PrefixSet<P> {
-    /// Construct a new, empty [`PrefixSet<P>`].
+impl<A: Afi> PrefixSet<A> {
+    /// Construct a new, empty [`PrefixSet<A>`].
     pub fn new() -> Self {
         PrefixSet { root: None }
     }
 
-    fn new_with_root(root: Option<Box<Node<P>>>) -> Self {
+    fn new_with_root(root: Option<Box<Node<A>>>) -> Self {
         PrefixSet { root }
     }
 
-    fn insert_node(&mut self, new: Box<Node<P>>) -> &mut Self {
+    fn insert_node(&mut self, new: Box<Node<A>>) -> &mut Self {
         match mem::take(&mut self.root) {
             Some(root) => {
                 self.root = Some(root.add(new));
@@ -55,14 +55,14 @@ impl<P: IpPrefix> PrefixSet<P> {
 
     /// Insert a new `item` into `self`.
     ///
-    /// `T` can be either `P` or [`IpPrefixRange<P>`](crate::IpPrefixRange).
+    /// `T` can be either a [`Prefix<A>`](ip::concrete::Prefix) or a
+    /// [`PrefixRange<A>`](ip::concrete::PrefixRange).
     ///
     /// ``` rust
-    /// # use prefixset::{Error, Ipv6Prefix, IpPrefixRange, PrefixSet};
+    /// # use ip::{PrefixRange, Ipv6};
+    /// # use prefixset::{Error, PrefixSet};
     /// # fn main() -> Result<(), Error> {
-    /// let range = IpPrefixRange::new(
-    ///     "2001:db8:f00::/48".parse::<Ipv6Prefix>()?, 64, 64,
-    /// )?;
+    /// let range: PrefixRange<Ipv6> = "2001:db8:f00::/48,64,64".parse()?;
     /// let set = PrefixSet::new()
     ///     .insert(range)
     ///     .to_owned();
@@ -72,23 +72,25 @@ impl<P: IpPrefix> PrefixSet<P> {
     /// ```
     pub fn insert<T>(&mut self, item: T) -> &mut Self
     where
-        T: Into<Box<Node<P>>>,
+        T: Into<Node<A>>,
     {
-        self.insert_node(item.into()).aggregate()
+        self.insert_node(item.into().boxed()).aggregate()
     }
 
-    /// Insert a items into `self` from an iterator yielding either `P` or
-    /// [`IpPrefixRange<P>`](crate::IpPrefixRange).
+    /// Insert items into `self` from an iterator yielding either
+    /// [`Prefix<A>`](ip::concrete::Prefix) or
+    /// [`PrefixRange<A>`](ip::concrete::PrefixRange).
     ///
     /// Aggregation occurs after all items are inserted, making this far more
     /// efficient than calling [`PrefixSet::insert()`] repeatedly.
     ///
     /// ``` rust
-    /// # use prefixset::{Error, Ipv4Prefix, PrefixSet};
+    /// # use ip::{Ipv4, Prefix};
+    /// # use prefixset::{Error, PrefixSet};
     /// # fn main() -> Result<(), Error> {
     /// let prefixes: Vec<_> = vec!["192.0.2.0/26", "192.0.2.64/26"]
     ///     .into_iter()
-    ///     .map(|s| s.parse::<Ipv4Prefix>())
+    ///     .map(|s| s.parse::<Prefix<Ipv4>>())
     ///     .collect::<Result<_, _>>()?;
     /// let set = PrefixSet::new()
     ///     .insert_from(prefixes)
@@ -100,14 +102,14 @@ impl<P: IpPrefix> PrefixSet<P> {
     pub fn insert_from<I, T>(&mut self, iter: I) -> &mut Self
     where
         I: IntoIterator<Item = T>,
-        T: Into<Box<Node<P>>>,
+        T: Into<Node<A>>,
     {
         iter.into_iter()
-            .fold(self, |set, item| set.insert_node(item.into()))
+            .fold(self, |set, item| set.insert_node(item.into().boxed()))
             .aggregate()
     }
 
-    fn remove_node(&mut self, mut old: Box<Node<P>>) -> &mut Self {
+    fn remove_node(&mut self, mut old: Box<Node<A>>) -> &mut Self {
         if let Some(root) = mem::take(&mut self.root) {
             self.root = Some(root.remove(&mut old));
         };
@@ -116,19 +118,21 @@ impl<P: IpPrefix> PrefixSet<P> {
 
     /// Remove an `item` from `self`.
     ///
-    /// `T` can be either `P` or [`IpPrefixRange<P>`](crate::IpPrefixRange).
+    /// `T` can be either a [`Prefix<A>`](ip::concrete::Prefix) or a
+    /// [`PrefixRange<A>`](ip::concrete::PrefixRange).
     ///
     /// ``` rust
-    /// # use prefixset::{Error, Ipv6Prefix, IpPrefixRange, PrefixSet};
+    /// # use ip::{Ipv6, Prefix};
+    /// # use prefixset::{Error, PrefixSet};
     /// # fn main() -> Result<(), Error> {
     /// let set = [
     ///         "2001:db8:f00::/48",
     ///         "2001:db8:baa::/48",
     ///     ]
     ///     .into_iter()
-    ///     .map(|s| s.parse::<Ipv6Prefix>())
+    ///     .map(|s| s.parse::<Prefix<Ipv6>>())
     ///     .collect::<Result<PrefixSet<_>, _>>()?
-    ///     .remove("2001:db8:f00::/48".parse::<Ipv6Prefix>()?)
+    ///     .remove("2001:db8:f00::/48".parse::<Prefix<Ipv6>>()?)
     ///     .to_owned();
     /// assert_eq!(set.len(), 1);
     /// #     Ok(())
@@ -136,26 +140,28 @@ impl<P: IpPrefix> PrefixSet<P> {
     /// ```
     pub fn remove<T>(&mut self, item: T) -> &mut Self
     where
-        T: Into<Box<Node<P>>>,
+        T: Into<Node<A>>,
     {
-        self.remove_node(item.into()).aggregate()
+        self.remove_node(item.into().boxed()).aggregate()
     }
 
-    /// Remove items from `self` from an iterator yielding either `P` or
-    /// [`IpPrefixRange<P>`](crate::IpPrefixRange).
+    /// Remove items into `self` from an iterator yielding either
+    /// [`Prefix<A>`](ip::concrete::Prefix) or
+    /// [`PrefixRange<A>`](ip::concrete::PrefixRange).
     ///
     /// Aggregation occurs after all items are removed, making this far more
     /// efficient than calling [`PrefixSet::remove()`] repeatedly.
     ///
     /// ``` rust
-    /// # use prefixset::{Error, Ipv4Prefix, IpPrefixRange, PrefixSet};
+    /// # use ip::{Ipv4, Prefix, PrefixRange};
+    /// # use prefixset::{Error, PrefixSet};
     /// # fn main() -> Result<(), Error> {
     /// let prefixes: Vec<_> = vec!["192.0.2.0/26", "192.0.2.64/26"]
     ///     .into_iter()
-    ///     .map(|s| s.parse::<Ipv4Prefix>())
+    ///     .map(|s| s.parse::<Prefix<Ipv4>>())
     ///     .collect::<Result<_, _>>()?;
     /// let mut set = PrefixSet::new()
-    ///     .insert("192.0.2.0/24,26,26".parse::<IpPrefixRange<Ipv4Prefix>>()?)
+    ///     .insert("192.0.2.0/24,26,26".parse::<PrefixRange<Ipv4>>()?)
     ///     .to_owned();
     /// assert_eq!(set.remove_from(prefixes).len(), 2);
     /// #     Ok(())
@@ -164,10 +170,10 @@ impl<P: IpPrefix> PrefixSet<P> {
     pub fn remove_from<I, T>(&mut self, iter: I) -> &mut Self
     where
         I: IntoIterator<Item = T>,
-        T: Into<Box<Node<P>>>,
+        T: Into<Node<A>>,
     {
         iter.into_iter()
-            .fold(self, |set, item| set.remove_node(item.into()))
+            .fold(self, |set, item| set.remove_node(item.into().boxed()))
             .aggregate()
     }
 
@@ -181,16 +187,17 @@ impl<P: IpPrefix> PrefixSet<P> {
     /// Test whether `prefix` is contained in `self`.
     ///
     /// ``` rust
-    /// # use prefixset::{Error, Ipv4Prefix, IpPrefixRange, PrefixSet};
+    /// # use ip::{Ipv4, Prefix, PrefixRange};
+    /// # use prefixset::{Error, PrefixSet};
     /// # fn main() -> Result<(), Error> {
     /// let set = PrefixSet::new()
-    ///     .insert("192.0.2.0/24,26,26".parse::<IpPrefixRange<Ipv4Prefix>>()?)
+    ///     .insert("192.0.2.0/24,26,26".parse::<PrefixRange<Ipv4>>()?)
     ///     .to_owned();
-    /// assert!(set.contains(&"192.0.2.128/26".parse()?));
+    /// assert!(set.contains("192.0.2.128/26".parse()?));
     /// #     Ok(())
     /// # }
     /// ```
-    pub fn contains(&self, prefix: &P) -> bool {
+    pub fn contains(&self, prefix: Prefix<A>) -> bool {
         match &self.root {
             Some(root) => root.search(&prefix.into()).is_some(),
             None => false,
@@ -200,10 +207,11 @@ impl<P: IpPrefix> PrefixSet<P> {
     /// Get the number of prefixes in `self`.
     ///
     /// ``` rust
-    /// # use prefixset::{Error, Ipv4Prefix, IpPrefixRange, PrefixSet};
+    /// # use ip::{Ipv4, PrefixRange};
+    /// # use prefixset::{Error, PrefixSet};
     /// # fn main() -> Result<(), Error> {
     /// let set = PrefixSet::new()
-    ///     .insert("192.0.2.0/24,26,26".parse::<IpPrefixRange<Ipv4Prefix>>()?)
+    ///     .insert("192.0.2.0/24,26,26".parse::<PrefixRange<Ipv4>>()?)
     ///     .to_owned();
     /// assert_eq!(set.len(), 4);
     /// #     Ok(())
@@ -216,9 +224,10 @@ impl<P: IpPrefix> PrefixSet<P> {
     /// Test whether `self` is empty.
     ///
     /// ``` rust
-    /// # use prefixset::{Error, Ipv4Prefix, PrefixSet};
+    /// # use ip::Ipv4;
+    /// # use prefixset::{Error, PrefixSet};
     /// # fn main() -> Result<(), Error> {
-    /// assert!(PrefixSet::<Ipv4Prefix>::new().is_empty());
+    /// assert!(PrefixSet::<Ipv4>::new().is_empty());
     /// #     Ok(())
     /// # }
     /// ```
@@ -229,11 +238,13 @@ impl<P: IpPrefix> PrefixSet<P> {
     /// Clear the contents of `self`
     ///
     /// ``` rust
-    /// # use prefixset::{Error, Ipv6Prefix, PrefixSet};
+    /// # use ip::{Ipv6, Prefix};
+    /// # use prefixset::{Error, PrefixSet};
     /// # fn main() -> Result<(), Error> {
     /// let mut set = PrefixSet::new()
-    ///     .insert("2001:db8::/32".parse::<Ipv6Prefix>()?)
+    ///     .insert("2001:db8::/32".parse::<Prefix<Ipv6>>()?)
     ///     .to_owned();
+    /// assert!(!set.is_empty());
     /// set.clear();
     /// assert!(set.is_empty());
     /// #     Ok(())
@@ -243,15 +254,16 @@ impl<P: IpPrefix> PrefixSet<P> {
         self.root = None
     }
 
-    /// Get an iterator over the [`IpPrefixRange<P>`](crate::IpPrefixRange)s
+    /// Get an iterator over the [`PrefixRange<A>`](ip::concrete::PrefixRange)s
     /// contained in `self`.
     ///
     /// ``` rust
-    /// # use prefixset::{Error, Ipv4Prefix, PrefixSet};
+    /// # use ip::{Ipv4, Prefix};
+    /// # use prefixset::{Error, PrefixSet};
     /// # fn main() -> Result<(), Error> {
     /// let set = PrefixSet::new()
-    ///     .insert("192.0.2.0/25".parse::<Ipv4Prefix>()?)
-    ///     .insert("192.0.2.128/25".parse::<Ipv4Prefix>()?)
+    ///     .insert("192.0.2.0/25".parse::<Prefix<Ipv4>>()?)
+    ///     .insert("192.0.2.128/25".parse::<Prefix<Ipv4>>()?)
     ///     .to_owned();
     /// let mut ranges = set.ranges();
     /// assert_eq!(ranges.next(), Some("192.0.2.0/24,25,25".parse()?));
@@ -259,18 +271,20 @@ impl<P: IpPrefix> PrefixSet<P> {
     /// #     Ok(())
     /// # }
     /// ```
-    pub fn ranges(&self) -> Ranges<P> {
+    pub fn ranges(&self) -> Ranges<A> {
         self.into()
     }
 
-    /// Get an iterator over the prefixes contained in `self`.
+    /// Get an iterator over the [`Prefix<A>`](ip::concrete::Prefix)s
+    /// contained in `self`.
     ///
     /// ``` rust
-    /// # use prefixset::{Error, Ipv4Prefix, PrefixSet};
+    /// # use ip::{Ipv4, Prefix};
+    /// # use prefixset::{Error, PrefixSet};
     /// # fn main() -> Result<(), Error> {
     /// let set = PrefixSet::new()
-    ///     .insert("192.0.2.0/25".parse::<Ipv4Prefix>()?)
-    ///     .insert("192.0.2.128/25".parse::<Ipv4Prefix>()?)
+    ///     .insert("192.0.2.0/25".parse::<Prefix<Ipv4>>()?)
+    ///     .insert("192.0.2.128/25".parse::<Prefix<Ipv4>>()?)
     ///     .to_owned();
     /// let mut prefixes = set.prefixes();
     /// assert_eq!(prefixes.next(), Some("192.0.2.0/25".parse()?));
@@ -279,36 +293,38 @@ impl<P: IpPrefix> PrefixSet<P> {
     /// #     Ok(())
     /// # }
     /// ```
-    pub fn prefixes(&self) -> Prefixes<P> {
+    pub fn prefixes(&self) -> Prefixes<A> {
         self.into()
     }
 }
 
-impl<P: IpPrefix> Default for PrefixSet<P> {
+impl<A: Afi> Default for PrefixSet<A> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a, P: IpPrefix> IntoIterator for &'a PrefixSet<P> {
-    type Item = P;
-    type IntoIter = Prefixes<'a, P>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.prefixes()
-    }
-}
-
-impl<P, A> Extend<A> for PrefixSet<P>
+impl<A: Afi, U> Extend<U> for PrefixSet<A>
 where
-    P: IpPrefix,
-    A: Into<Box<Node<P>>>,
+    U: Into<Node<A>>,
 {
     fn extend<T>(&mut self, iter: T)
     where
-        T: IntoIterator<Item = A>,
+        T: IntoIterator<Item = U>,
     {
         self.insert_from(iter);
+    }
+}
+
+impl<A: Afi, T> FromIterator<T> for PrefixSet<A>
+where
+    T: Into<Node<A>>,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+    {
+        Self::new().insert_from(iter).to_owned()
     }
 }
 
