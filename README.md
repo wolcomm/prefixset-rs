@@ -5,6 +5,10 @@
 [![codecov](https://codecov.io/gh/wolcomm/prefixset-rs/branch/master/graph/badge.svg?token=9dktFtdydp)](https://codecov.io/gh/wolcomm/prefixset-rs)
 [![docs.rs](https://img.shields.io/docsrs/prefixset)](https://docs.rs/prefixset)
 
+## Deprecated
+
+This crate is deprecated. A replacement is available in the [`generic-ip-rs`] crate.
+
 ## About
 
 A Rust library crate `prefixset`, providing a set-like container for IP
@@ -51,3 +55,4 @@ fn main() -> Result<(), Error> {
 ```
 
 [`bgpq3`]: https://github.com/snar/bgpq3
+[`generic-ip-rs`]: https://github.com/wolcomm/generic-ip-rs
